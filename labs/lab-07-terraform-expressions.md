@@ -1094,3 +1094,639 @@ You will learn:
 - Nested configuration generation
 - Real Security Group examples
 - Advanced Terraform patterns
+
+---
+
+# Part 3 - Dynamic Blocks and Advanced Expressions
+
+Congratulations!
+
+You now understand:
+
+- Conditional expressions
+- Operators
+- For expressions
+- Splat expressions
+
+Now we will learn Dynamic Blocks.
+
+---
+
+# What Are Dynamic Blocks?
+
+A Dynamic Block allows Terraform to create repeated nested blocks automatically.
+
+Normally, you write:
+
+```hcl
+ingress {
+
+  from_port = 80
+
+  to_port = 80
+
+}
+
+ingress {
+
+  from_port = 443
+
+  to_port = 443
+
+}
+```
+
+This becomes difficult when you have many rules.
+
+Dynamic blocks solve this problem.
+
+---
+
+# Real World Example
+
+A company needs a Security Group:
+
+Allow:
+
+```
+HTTP 80
+
+HTTPS 443
+
+SSH 22
+```
+
+Without Dynamic Blocks:
+
+You manually create:
+
+```
+3 ingress blocks
+```
+
+With Dynamic Blocks:
+
+You provide a list:
+
+```
+80
+
+443
+
+22
+```
+
+Terraform creates the blocks automatically.
+
+---
+
+# Dynamic Block Syntax
+
+Basic structure:
+
+```hcl
+dynamic "block_name" {
+
+  for_each = collection
+
+  content {
+
+    attribute = block_name.value
+
+  }
+
+}
+```
+
+---
+
+# Architecture
+
+```
+Variable
+
+    |
+
+    ▼
+
+List of Values
+
+    |
+
+    ▼
+
+Dynamic Block
+
+    |
+
+    ▼
+
+Multiple Resource Blocks
+
+```
+
+---
+
+# Step 29 - Create Security Group Example
+
+Open:
+
+```
+variables.tf
+```
+
+Add:
+
+```hcl
+variable "allowed_ports" {
+
+  description = "Ports allowed in security group"
+
+  type = list(number)
+
+  default = [
+    22,
+    80,
+    443
+  ]
+
+}
+```
+
+---
+
+# Step 30 - Create Security Group Resource
+
+Open:
+
+```
+main.tf
+```
+
+Add:
+
+```hcl
+resource "aws_security_group" "web" {
+
+  name = local.security_group_name
+
+
+  dynamic "ingress" {
+
+    for_each = var.allowed_ports
+
+
+    content {
+
+      from_port = ingress.value
+
+      to_port = ingress.value
+
+      protocol = "tcp"
+
+      cidr_blocks = [
+        "0.0.0.0/0"
+      ]
+
+    }
+
+  }
+
+
+  egress {
+
+    from_port = 0
+
+    to_port = 0
+
+    protocol = "-1"
+
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+
+  }
+
+
+  tags = local.common_tags
+
+}
+```
+
+---
+
+# Understanding Dynamic Block
+
+This part:
+
+```hcl
+for_each = var.allowed_ports
+```
+
+loops through:
+
+```
+[
+22,
+80,
+443
+]
+```
+
+Terraform creates:
+
+First:
+
+```
+ingress 22
+```
+
+Second:
+
+```
+ingress 80
+```
+
+Third:
+
+```
+ingress 443
+```
+
+---
+
+# Generated Terraform Result
+
+Terraform internally creates:
+
+```hcl
+ingress {
+
+from_port = 22
+
+to_port = 22
+
+}
+
+
+ingress {
+
+from_port = 80
+
+to_port = 80
+
+}
+
+
+ingress {
+
+from_port = 443
+
+to_port = 443
+
+}
+```
+
+You only wrote one block.
+
+---
+
+# Step 31 - Add Output
+
+Open:
+
+```
+outputs.tf
+```
+
+Add:
+
+```hcl
+output "security_group_id" {
+
+  description = "Security Group ID"
+
+  value = aws_security_group.web.id
+
+}
+```
+
+---
+
+# Step 32 - Format
+
+Run:
+
+```bash
+terraform fmt
+```
+
+---
+
+# Step 33 - Validate
+
+Run:
+
+```bash
+terraform validate
+```
+
+Expected:
+
+```
+Success! The configuration is valid.
+```
+
+---
+
+# Step 34 - Plan
+
+Run:
+
+```bash
+terraform plan
+```
+
+You should see:
+
+```
+aws_security_group.web
+```
+
+being created.
+
+---
+
+# Step 35 - Apply
+
+Run:
+
+```bash
+terraform apply
+```
+
+Type:
+
+```
+yes
+```
+
+Terraform creates:
+
+```
+Security Group
+
+Inbound Rules:
+
+22
+
+80
+
+443
+```
+
+---
+
+# Verify in AWS Console
+
+Go to:
+
+```
+AWS Console
+
+↓
+
+EC2
+
+↓
+
+Security Groups
+```
+
+You should see:
+
+```
+terraform-zero-to-hero-dev-sg
+```
+
+Rules:
+
+```
+SSH 22
+
+HTTP 80
+
+HTTPS 443
+```
+
+---
+
+# Real Production Usage
+
+Dynamic blocks are commonly used for:
+
+## Security Groups
+
+Example:
+
+```
+Multiple ingress rules
+```
+
+---
+
+## IAM Policies
+
+Example:
+
+```
+Multiple permissions
+```
+
+---
+
+## Load Balancers
+
+Example:
+
+```
+Multiple listener rules
+```
+
+---
+
+## Route Tables
+
+Example:
+
+```
+Multiple routes
+```
+
+---
+
+# Dynamic Block vs For Expression
+
+They are different.
+
+## For Expression
+
+Creates values.
+
+Example:
+
+```
+List
+
+Map
+
+String
+```
+
+Example:
+
+```hcl
+[
+for item in list :
+item
+]
+```
+
+---
+
+## Dynamic Block
+
+Creates Terraform configuration blocks.
+
+Example:
+
+```hcl
+dynamic "ingress"
+```
+
+Creates:
+
+```
+multiple ingress blocks
+```
+
+---
+
+# Common Mistakes
+
+## Mistake 1
+
+Using dynamic block for simple values.
+
+Wrong:
+
+```hcl
+dynamic "name"
+```
+
+Dynamic blocks are for nested blocks.
+
+---
+
+## Mistake 2
+
+Wrong iterator reference.
+
+Incorrect:
+
+```hcl
+value
+```
+
+Correct:
+
+```hcl
+ingress.value
+```
+
+---
+
+## Mistake 3
+
+Forgetting collection type.
+
+Dynamic blocks need:
+
+```
+list
+
+set
+
+map
+```
+
+---
+
+# Lab Verification Checklist
+
+Verify:
+
+✅ Dynamic block created  
+✅ Security Group created  
+✅ Multiple rules generated  
+✅ Variables used correctly  
+✅ Output displays ID  
+✅ Terraform validation passes  
+
+---
+
+# Summary
+
+You learned:
+
+- Dynamic Blocks
+- Generating repeated configuration
+- Security Group example
+- Dynamic block vs For expression
+- Production use cases
+
+---
+
+# End of Lab 07
+
+You have completed:
+
+✅ Conditional Expressions  
+✅ Operators  
+✅ For Expressions  
+✅ Splat Expressions  
+✅ Dynamic Blocks  
+
+---
+
+# Git Save
+
+Run:
+
+```bash
+git status
+
+git add .
+
+git commit -m "Complete Lab 07 - Terraform Expressions"
+
+git push origin main
+```
+
+---
+
+# Next Lab
+
+## Lab 08 - Terraform Meta Arguments
+
+You will learn:
+
+- count
+- for_each
+- depends_on
+- lifecycle
+- Creating multiple resources
+- Resource dependencies
+- Production patterns
+
+After Lab 08, you will be able to create multiple EC2 instances and infrastructure components automatically.
