@@ -21,7 +21,7 @@ A complete hands-on Terraform learning repository covering beginner to advanced 
 
 | Lab | Topic | Status |
 |------|-------------------------------|--------|
-| 01 | (Install Terraform)[labs/lab-01-install-terraform.md] | ⬜ |
+| 01 | [Install Terraform](labs/lab-01-install-terraform.md) | ⬜ |
 | 02 | Terraform Providers | ⬜ |
 | 03 | Variables | ⬜ |
 | 04 | Locals | ⬜ |
