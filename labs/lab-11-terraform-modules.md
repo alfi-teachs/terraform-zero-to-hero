@@ -619,3 +619,670 @@ You will learn:
 - Environment structure
 - Production Terraform repository design
 - Terraform Registry modules
+
+---
+
+# Part 2 - Advanced Terraform Modules
+
+Now we will improve our module design.
+
+A real company does not keep everything in:
+
+```
+main.tf
+```
+
+Instead they organize:
+
+```
+Modules
+
++
+
+Environments
+
++
+
+Reusable Infrastructure
+```
+
+---
+
+# Enterprise Terraform Structure
+
+A common production structure:
+
+```
+terraform-project
+
+│
+├── modules
+│
+│   ├── vpc
+│   │
+│   ├── ec2
+│   │
+│   ├── security-group
+│   │
+│   └── database
+│
+│
+└── environments
+    │
+    ├── dev
+    │
+    ├── test
+    │
+    └── prod
+```
+
+---
+
+# Why Separate Environments?
+
+Development:
+
+```
+Small EC2
+
+Cheap resources
+```
+
+Production:
+
+```
+Large EC2
+
+High availability
+
+More security
+```
+
+Same modules.
+
+Different values.
+
+---
+
+# Module Reusability Example
+
+One EC2 Module:
+
+```
+modules/ec2
+```
+
+Used by:
+
+```
+dev
+
+test
+
+prod
+```
+
+---
+
+# Architecture
+
+```
+                 Root Module
+
+
+                      |
+
+        ----------------------------
+
+
+        |                          |
+
+
+     Dev Environment          Prod Environment
+
+
+        |                          |
+
+
+        ▼                          ▼
+
+
+     EC2 Module                EC2 Module
+
+
+        |                          |
+
+
+        ▼                          ▼
+
+
+     AWS EC2                  AWS EC2
+
+```
+
+---
+
+# Step 11 - Create Environment Structure
+
+Go to:
+
+```
+terraform/lab-11-modules
+```
+
+Create:
+
+```bash
+mkdir -p environments/dev
+
+mkdir -p environments/prod
+```
+
+Structure becomes:
+
+```
+lab-11-modules
+
+├── modules
+
+│   └── ec2
+
+
+└── environments
+
+    ├── dev
+
+    └── prod
+```
+
+---
+
+# Step 12 - Create Dev Environment
+
+Go:
+
+```bash
+cd environments/dev
+```
+
+Create:
+
+```bash
+touch main.tf
+
+touch variables.tf
+
+touch terraform.tfvars
+
+touch outputs.tf
+```
+
+---
+
+# Step 13 - Dev Variables
+
+Open:
+
+```
+variables.tf
+```
+
+Add:
+
+```hcl
+variable "instance_type" {
+
+  type = string
+
+}
+
+
+variable "environment" {
+
+  type = string
+
+}
+```
+
+---
+
+# Step 14 - Dev Values
+
+Open:
+
+```
+terraform.tfvars
+```
+
+Add:
+
+```hcl
+instance_type = "t2.micro"
+
+environment = "dev"
+```
+
+---
+
+# Step 15 - Call EC2 Module
+
+Open:
+
+```
+main.tf
+```
+
+Add:
+
+```hcl
+module "dev_server" {
+
+  source = "../../modules/ec2"
+
+
+  ami_id = data.aws_ami.amazon_linux.id
+
+
+  instance_type = var.instance_type
+
+
+  name = "dev-web-server"
+
+}
+```
+
+---
+
+# Step 16 - Add Data Source
+
+Create:
+
+```
+data.tf
+```
+
+Add:
+
+```hcl
+data "aws_ami" "amazon_linux" {
+
+
+  most_recent = true
+
+
+  owners = [
+
+    "amazon"
+
+  ]
+
+
+  filter {
+
+    name = "name"
+
+
+    values = [
+
+      "al2023-ami-*-x86_64"
+
+    ]
+
+  }
+
+}
+```
+
+---
+
+# Step 17 - Dev Output
+
+Open:
+
+```
+outputs.tf
+```
+
+Add:
+
+```hcl
+output "server_id" {
+
+  value = module.dev_server.instance_id
+
+}
+
+
+output "server_ip" {
+
+  value = module.dev_server.public_ip
+
+}
+```
+
+---
+
+# Step 18 - Initialize Dev Environment
+
+Run:
+
+```bash
+terraform init
+```
+
+---
+
+# Step 19 - Validate
+
+Run:
+
+```bash
+terraform validate
+```
+
+Expected:
+
+```
+Success! The configuration is valid.
+```
+
+---
+
+# Step 20 - Plan
+
+Run:
+
+```bash
+terraform plan
+```
+
+Terraform shows:
+
+```
+module.dev_server.aws_instance.this
+```
+
+---
+
+# Step 21 - Apply
+
+Run:
+
+```bash
+terraform apply
+```
+
+Type:
+
+```
+yes
+```
+
+---
+
+# What Happened?
+
+Terraform:
+
+1. Started from dev environment
+
+2. Called EC2 module
+
+3. Passed variables
+
+4. Created EC2
+
+5. Returned outputs
+
+---
+
+# Module Input and Output Flow
+
+```
+Environment
+
+
+instance_type = t2.micro
+
+
+        |
+
+
+        ▼
+
+
+EC2 Module
+
+
+        |
+
+
+        ▼
+
+
+AWS EC2
+
+
+        |
+
+
+        ▼
+
+
+Output
+
+
+instance_id
+
+public_ip
+
+```
+
+---
+
+# Multiple Module Calls
+
+You can call the same module many times.
+
+Example:
+
+```hcl
+module "web" {
+
+source = "../../modules/ec2"
+
+name = "web-server"
+
+}
+
+
+module "app" {
+
+source = "../../modules/ec2"
+
+name = "app-server"
+
+}
+```
+
+Result:
+
+```
+web-server
+
+app-server
+```
+
+Both created from the same module.
+
+---
+
+# Terraform Registry Modules
+
+Terraform also provides public modules.
+
+Example:
+
+Instead of manually creating VPC:
+
+```
+VPC
+
+Subnets
+
+Route Tables
+
+Internet Gateway
+```
+
+You can use:
+
+```
+AWS VPC Module
+```
+
+from Terraform Registry.
+
+---
+
+# Production Module Rules
+
+Good modules should:
+
+✅ Accept variables
+
+✅ Provide outputs
+
+✅ Avoid hardcoded values
+
+✅ Be reusable
+
+✅ Have documentation
+
+✅ Have version control
+
+---
+
+# Common Module Mistakes
+
+## Mistake 1
+
+Hardcoding values:
+
+Wrong:
+
+```hcl
+instance_type = "t2.micro"
+```
+
+Better:
+
+```hcl
+variable "instance_type"
+```
+
+---
+
+## Mistake 2
+
+Too many resources in one module.
+
+Bad:
+
+```
+VPC + EC2 + Database + Load Balancer
+```
+
+Better:
+
+```
+vpc module
+
+ec2 module
+
+database module
+```
+
+---
+
+## Mistake 3
+
+No outputs.
+
+Modules should return useful information.
+
+Example:
+
+```
+instance_id
+
+private_ip
+
+security_group_id
+```
+
+---
+
+# Lab Verification Checklist
+
+Verify:
+
+✅ Module folder created  
+✅ EC2 module works  
+✅ Environment structure created  
+✅ Variables passed correctly  
+✅ Outputs returned correctly  
+✅ Same module can be reused  
+
+---
+
+# Summary
+
+You learned:
+
+- Enterprise Terraform structure
+- Environment separation
+- Module reuse
+- Module inputs
+- Module outputs
+- Production design patterns
+
+---
+
+# Git Save
+
+Run:
+
+```bash
+git status
+
+git add .
+
+git commit -m "Complete Lab 11 Terraform Modules"
+
+git push origin main
+```
+
+---
+
+# Next Lab
+
+# Lab 12 - Terraform AWS Networking Project
+
+You will build:
+
+```
+VPC
+
+Subnets
+
+Internet Gateway
+
+Route Tables
+
+Security Groups
+
+EC2 inside VPC
+```
+
+This will be your first complete AWS network deployment using Terraform.
