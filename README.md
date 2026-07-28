@@ -21,9 +21,13 @@ A complete hands-on Terraform learning repository covering beginner to advanced 
 
 | Lab | Topic | Status |
 |------|-------------------------------|--------|
-| 01 | Install Terraform | ⬜ |
-| 02 | Terraform Providers | ⬜ |
-| 03 | Variables | ⬜ |
+| 01 | [Install Terraform](labs/lab-01-install-terraform.md) | ⬜ |
+| 02 | [Terraform Providers](labs/lab-02-providers.md) | ⬜ |
+| 03 | [Terraform Variables](labs/lab-03-variables.md) | ⬜ |
+
+| Lab | Topic | Status |
+|------|-------------------------------|--------|
+
 | 04 | Locals | ⬜ |
 | 05 | Outputs | ⬜ |
 | 06 | EC2 Instance | ⬜ |
