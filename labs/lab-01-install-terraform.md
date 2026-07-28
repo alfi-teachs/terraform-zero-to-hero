@@ -1175,3 +1175,440 @@ Today you learned:
 ✔ How to validate a configuration
 
 You have successfully completed the first hands-on interaction with Terraform.
+
+---
+
+# Part 4 - Terraform Workflow, Troubleshooting and Interview Questions
+
+Congratulations!
+
+You have successfully installed Terraform and initialized your first Terraform project.
+
+Now let's understand the complete Terraform workflow that you will use in every lab.
+
+---
+
+# The Terraform Workflow
+
+Terraform follows the same workflow for almost every project.
+
+```
+Write Code
+     │
+     ▼
+terraform fmt
+     │
+     ▼
+terraform validate
+     │
+     ▼
+terraform init
+     │
+     ▼
+terraform plan
+     │
+     ▼
+terraform apply
+     │
+     ▼
+Infrastructure Created
+     │
+     ▼
+terraform destroy
+     │
+     ▼
+Infrastructure Deleted
+```
+
+As you progress through future labs, you'll use this workflow repeatedly.
+
+---
+
+# Terraform Commands Explained
+
+## terraform fmt
+
+Formats Terraform code into a consistent style.
+
+Run:
+
+```bash
+terraform fmt
+```
+
+Why use it?
+
+- Makes code readable.
+- Keeps formatting consistent across teams.
+- Automatically fixes indentation.
+
+Run this command whenever you finish editing Terraform files.
+
+---
+
+## terraform validate
+
+Checks Terraform configuration for syntax errors.
+
+Run:
+
+```bash
+terraform validate
+```
+
+Expected Output:
+
+```text
+Success! The configuration is valid.
+```
+
+This command does **not** create any resources.
+
+It only checks whether the configuration is valid.
+
+---
+
+## terraform init
+
+Initializes the working directory.
+
+Run:
+
+```bash
+terraform init
+```
+
+Terraform:
+
+- Downloads providers
+- Creates `.terraform/`
+- Creates `.terraform.lock.hcl`
+- Prepares the directory
+
+---
+
+## terraform plan
+
+Shows what Terraform **would** do.
+
+Run:
+
+```bash
+terraform plan
+```
+
+Since there are no resources yet, you may see output indicating that there are no changes to make, or Terraform may simply report that the configuration contains no resources.
+
+Nothing is created.
+
+Think of this as a preview.
+
+---
+
+## terraform apply
+
+Creates infrastructure.
+
+Run:
+
+```bash
+terraform apply
+```
+
+Later labs will ask for confirmation:
+
+```text
+Do you want to perform these actions?
+
+Enter a value:
+```
+
+Type:
+
+```text
+yes
+```
+
+Terraform then creates the resources.
+
+Since Lab 01 contains no resources, nothing will be created.
+
+---
+
+## terraform destroy
+
+Deletes everything Terraform created.
+
+Run:
+
+```bash
+terraform destroy
+```
+
+Terraform will ask:
+
+```text
+Do you really want to destroy?
+
+Enter a value:
+```
+
+Type:
+
+```text
+yes
+```
+
+In Lab 01 there is nothing to destroy.
+
+---
+
+# Most Common Terraform Commands
+
+| Command | Purpose |
+|----------|----------|
+| terraform version | Show installed version |
+| terraform fmt | Format code |
+| terraform validate | Validate configuration |
+| terraform init | Initialize project |
+| terraform plan | Preview changes |
+| terraform apply | Create or update infrastructure |
+| terraform destroy | Delete infrastructure |
+| terraform output | Show output values |
+| terraform state list | List managed resources |
+
+---
+
+# Common Errors
+
+## Error
+
+```text
+terraform: command not found
+```
+
+### Cause
+
+Terraform is not installed or PATH is incorrect.
+
+### Solution
+
+- Verify `terraform.exe` exists.
+- Check that `C:\Terraform` is in the PATH.
+- Restart the terminal.
+
+---
+
+## Error
+
+```text
+No configuration files
+```
+
+### Cause
+
+You are in the wrong directory.
+
+### Solution
+
+Check your current location:
+
+```bash
+pwd
+```
+
+Move to the lab directory:
+
+```bash
+cd terraform/lab-01
+```
+
+---
+
+## Error
+
+```text
+Permission denied
+```
+
+### Cause
+
+Insufficient permissions.
+
+### Solution
+
+Run Git Bash or your terminal with the appropriate permissions and verify folder access.
+
+---
+
+## Error
+
+```text
+terraform validate
+```
+
+returns errors.
+
+### Cause
+
+There may be a syntax error in one of the `.tf` files.
+
+### Solution
+
+Run:
+
+```bash
+terraform fmt
+```
+
+Review the file mentioned in the error and fix the syntax.
+
+---
+
+# Best Practices
+
+- Keep one project per folder.
+- Always run `terraform fmt` before committing.
+- Run `terraform validate` before `terraform plan`.
+- Use Git to track every change.
+- Never manually edit the `.terraform` directory.
+- Commit `.terraform.lock.hcl`.
+- Never commit sensitive information such as passwords or access keys.
+
+---
+
+# Lab Verification Checklist
+
+You should now have:
+
+- ✅ Terraform installed
+- ✅ Git repository created
+- ✅ Project folder structure created
+- ✅ Lab 01 directory created
+- ✅ Terraform files created
+- ✅ VS Code project opened
+- ✅ `terraform init` completed
+- ✅ `terraform validate` completed
+- ✅ Understanding of the Terraform workflow
+
+---
+
+# Assignment
+
+Complete the following tasks:
+
+1. Run:
+
+```bash
+terraform version
+```
+
+2. Run:
+
+```bash
+terraform fmt
+```
+
+3. Run:
+
+```bash
+terraform validate
+```
+
+4. Run:
+
+```bash
+terraform init
+```
+
+5. Verify the following files exist:
+
+```
+terraform/lab-01/
+├── .terraform/
+├── .terraform.lock.hcl
+├── main.tf
+├── provider.tf
+├── variables.tf
+├── outputs.tf
+├── terraform.tfvars
+└── README.md
+```
+
+---
+
+# Interview Questions
+
+## Beginner
+
+1. What is Terraform?
+2. What is Infrastructure as Code?
+3. Who developed Terraform?
+4. Why do companies use Terraform?
+5. Which cloud providers are supported by Terraform?
+
+---
+
+## Intermediate
+
+6. What does `terraform init` do?
+7. What is the purpose of `.terraform.lock.hcl`?
+8. What is stored inside the `.terraform` directory?
+9. What is the difference between `terraform validate` and `terraform plan`?
+10. Why should you run `terraform fmt`?
+
+---
+
+## Practical
+
+11. Which command previews infrastructure changes?
+12. Which command actually creates resources?
+13. Which command deletes resources?
+14. Which command checks the installed Terraform version?
+15. Why is Git useful with Terraform?
+
+---
+
+# Key Takeaways
+
+After completing this lab, you can:
+
+- Explain what Terraform is.
+- Explain Infrastructure as Code (IaC).
+- Install Terraform on Windows.
+- Create a Terraform project structure.
+- Understand the purpose of common Terraform files.
+- Run the core Terraform commands.
+- Recognize the standard Terraform workflow.
+
+---
+
+# Next Lab
+
+**Lab 02 – Terraform Providers**
+
+In the next lab you will learn:
+
+- What a provider is
+- Why providers are required
+- Configure the AWS provider
+- Specify provider versions
+- Understand provider plugins
+- Run `terraform init` to download the AWS provider
+
+By the end of Lab 02, Terraform will be ready to communicate with AWS.
+
+---
+
+# Save Your Work
+
+Run the following commands:
+
+```bash
+git status
+git add .
+git commit -m "Complete Lab 01 - Install Terraform"
+git push origin main
+```
+
+Congratulations! You have completed **Lab 01** and are ready to move on to **Lab 02 – Terraform Providers**.
