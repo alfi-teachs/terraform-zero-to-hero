@@ -738,3 +738,440 @@ At this point you should have:
 ✅ Documentation Folder
 
 You are now ready to start writing Terraform code in the next part.
+
+---
+
+# Part 3 - Your First Terraform Configuration
+
+Congratulations!
+
+You have successfully installed Terraform and created your project structure.
+
+Now it's time to write your first Terraform configuration.
+
+Don't worry if you've never written Terraform before.
+
+We'll understand every single line.
+
+---
+
+# What is a Terraform Configuration?
+
+A Terraform configuration is simply one or more files ending with:
+
+.tf
+
+Example:
+
+main.tf
+
+provider.tf
+
+variables.tf
+
+outputs.tf
+
+Terraform reads all *.tf files in the current directory.
+
+---
+
+# Terraform File Purpose
+
+Our Lab 01 folder contains:
+
+terraform/
+└── lab-01/
+    ├── provider.tf
+    ├── main.tf
+    ├── variables.tf
+    ├── outputs.tf
+    ├── terraform.tfvars
+    └── README.md
+
+Let's understand each file.
+
+---
+
+## provider.tf
+
+This file tells Terraform which cloud provider to use.
+
+Examples:
+
+AWS
+
+Azure
+
+Google Cloud
+
+VMware
+
+Kubernetes
+
+Without a provider, Terraform does not know where to create resources.
+
+In later labs we will configure AWS here.
+
+For now, leave it empty.
+
+---
+
+## main.tf
+
+This is the most important file.
+
+It contains the infrastructure you want Terraform to create.
+
+Examples:
+
+EC2
+
+VPC
+
+S3 Bucket
+
+Security Group
+
+IAM User
+
+For Lab 01 we are only learning the workflow, so leave it empty.
+
+---
+
+## variables.tf
+
+Stores input variables.
+
+Example:
+
+Instead of hardcoding:
+
+Instance Type = t2.micro
+
+you can create a variable:
+
+instance_type
+
+and change it whenever needed.
+
+We will learn variables in Lab 03.
+
+Leave this file empty.
+
+---
+
+## terraform.tfvars
+
+Stores values for variables.
+
+Example:
+
+instance_type = "t2.micro"
+
+Terraform automatically loads this file.
+
+Leave it empty.
+
+---
+
+## outputs.tf
+
+Displays information after Terraform creates resources.
+
+Example:
+
+Public IP
+
+Instance ID
+
+VPC ID
+
+Subnet ID
+
+Load Balancer DNS
+
+Leave it empty.
+
+---
+
+## README.md
+
+This README belongs only to Lab 01.
+
+It explains:
+
+Purpose
+
+Files
+
+Commands
+
+Expected Output
+
+Notes
+
+---
+
+# Step 17 - Open the Project in Visual Studio Code
+
+Open Git Bash.
+
+Navigate to your project.
+
+```bash
+cd ~/OneDrive/Desktop/terraform/terraform-zero-to-hero
+```
+
+Open VS Code.
+
+```bash
+code .
+```
+
+If the command does not work:
+
+Open VS Code
+
+Click
+
+File
+
+Open Folder
+
+Choose:
+
+terraform-zero-to-hero
+
+---
+
+# Step 18 - Open Lab 01
+
+In VS Code open:
+
+terraform
+
+↓
+
+lab-01
+
+You should see:
+
+provider.tf
+
+main.tf
+
+variables.tf
+
+outputs.tf
+
+terraform.tfvars
+
+README.md
+
+---
+
+# Step 19 - Save Empty Files
+
+Even though they are empty,
+
+press
+
+CTRL + S
+
+for each file.
+
+This ensures VS Code recognizes them.
+
+---
+
+# Step 20 - Initialize Terraform
+
+Open Terminal inside VS Code.
+
+Or Git Bash.
+
+Navigate to:
+
+```bash
+cd terraform/lab-01
+```
+
+Verify.
+
+```bash
+pwd
+```
+
+Expected Output
+
+```text
+.../terraform-zero-to-hero/terraform/lab-01
+```
+
+Now initialize Terraform.
+
+```bash
+terraform init
+```
+
+Expected Output
+
+```text
+Terraform initialized in an empty directory!
+
+The directory has no Terraform configuration files.
+You may begin working with Terraform immediately...
+```
+
+This is expected because we haven't written any resources yet.
+
+The important thing is that Terraform runs successfully.
+
+---
+
+# What Does terraform init Do?
+
+This is always the first command you run.
+
+It prepares your working directory.
+
+terraform init performs several tasks:
+
+• Checks Terraform configuration
+
+• Downloads required providers
+
+• Creates Terraform working directory
+
+• Creates lock file
+
+Think of it like installing dependencies before running a project.
+
+You only need to run it:
+
+• First time
+
+• After changing providers
+
+• After deleting the .terraform folder
+
+---
+
+# Step 21 - Check New Files
+
+Run:
+
+```bash
+ls -la
+```
+
+Expected Output
+
+```text
+.terraform/
+
+.terraform.lock.hcl
+
+main.tf
+
+outputs.tf
+
+provider.tf
+
+terraform.tfvars
+
+variables.tf
+
+README.md
+```
+
+Notice two new items.
+
+Terraform created them automatically.
+
+---
+
+# What is the .terraform Folder?
+
+This folder stores:
+
+Downloaded providers
+
+Plugin binaries
+
+Internal metadata
+
+Never edit it manually.
+
+---
+
+# What is .terraform.lock.hcl?
+
+This file locks provider versions.
+
+Example:
+
+AWS Provider 6.2.0
+
+Every developer on the team uses the same provider version.
+
+Always commit this file to Git.
+
+---
+
+# Step 22 - Check Terraform Version Again
+
+Run:
+
+```bash
+terraform version
+```
+
+Example Output
+
+```text
+Terraform v1.x.x
+on windows_amd64
+```
+
+---
+
+# Step 23 - Validate Configuration
+
+Run:
+
+```bash
+terraform validate
+```
+
+Expected Output
+
+```text
+Success! The configuration is valid.
+```
+
+Since there are no resources yet, Terraform simply confirms the directory is valid.
+
+---
+
+# Summary
+
+Today you learned:
+
+✔ What Terraform configuration is
+
+✔ Purpose of each Terraform file
+
+✔ How to open the project in VS Code
+
+✔ How to initialize Terraform
+
+✔ What the .terraform folder is
+
+✔ What the lock file is
+
+✔ Why terraform init is the first command
+
+✔ How to validate a configuration
+
+You have successfully completed the first hands-on interaction with Terraform.
