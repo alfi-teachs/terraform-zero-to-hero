@@ -1318,3 +1318,29 @@ git commit -m "Complete Lab 12 AWS Networking Project"
 
 git push origin main
 ```
+Interview Questions
+
+Beginner
+```bash
+What is a VPC?
+Difference between a public and private subnet?
+Why do we need an Internet Gateway?
+What is a Route Table?
+What is a Security Group?
+```
+Intermediate
+```bash
+Why is map_public_ip_on_launch important?
+Why associate a Route Table with a subnet?
+What happens if an Internet Gateway is missing?
+Difference between Security Groups and NACLs?
+Why use User Data?
+```
+Advanced
+```bash
+How would you make the private subnet access the internet?
+Where would you place an RDS database?
+Why should application servers be in private subnets?
+What AWS resources are required for a highly available VPC?
+How would you improve this architecture for production?
+```
