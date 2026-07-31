@@ -360,87 +360,66 @@ terraform fmt
 terraform validate
 terraform plan
 ```
-## Step 6 – Create subnet.tf
-What is a Subnet?
+## Step 6 - Create `subnet.tf`
 
-A subnet is a smaller network inside a VPC.
+### What is a Subnet?
 
-Open it:
+A **subnet** is a smaller network inside a VPC that helps organize and isolate AWS resources.
+
+Create the file:
+
 ```bash
 nano subnet.tf
 ```
-```bash
+
+Add the following configuration:
+
+```hcl
 resource "aws_subnet" "public" {
-
-  vpc_id = aws_vpc.main.id
-
-  cidr_block = var.public_subnet_cidr
-
-  availability_zone = var.availability_zone
-
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
 
   tags = {
-
     Name = "lab13-public-subnet"
-
   }
-
 }
-```
 
-### Create the Private Subnet
-
-Below the previous resource, paste:
-```bash
 resource "aws_subnet" "private" {
-
-  vpc_id = aws_vpc.main.id
-
-  cidr_block = var.private_subnet_cidr
-
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidr
   availability_zone = var.availability_zone
 
   tags = {
-
     Name = "lab13-private-subnet"
-
   }
-
 }
-
 ```
-Explanation
 
-This subnet is almost the same as the public subnet.
+### Explanation
 
-The important difference:
+- `aws_subnet.public` – Creates a public subnet inside the VPC.
+- `aws_subnet.private` – Creates a private subnet inside the VPC.
+- `vpc_id` – Associates the subnet with the VPC.
+- `cidr_block` – Defines the IP address range for the subnet.
+- `availability_zone` – Specifies the Availability Zone where the subnet is created.
+- `map_public_ip_on_launch = true` – Automatically assigns a public IP to EC2 instances launched in the public subnet.
+- The private subnet does **not** use `map_public_ip_on_launch`, so EC2 instances launched there do not receive a public IP.
 
-Notice it does not have:
+### Validate the Configuration
 
-map_public_ip_on_launch = true
+Run the following commands:
 
-Therefore:
-
-EC2 launched here
-
-↓
-
-No Public IP
-
-Perfect for:
-
-- Databases
-- Application Servers
-- Internal Services
-
-After subnet.tf
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
----
+
+- `terraform fmt` – Formats Terraform files.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
+- `terraform plan` – Shows the changes Terraform will make before creating resources.
 
 # Step 7 - Create Internet Gateway
 
