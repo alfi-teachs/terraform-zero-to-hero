@@ -900,5 +900,864 @@ terraform plan
 - `terraform plan` – Shows the resources Terraform will create.
 
 ---
+# Step 10 - Create `data.tf`
 
+## Objective
 
+Use a Terraform Data Source to automatically retrieve the latest Amazon Linux 2023 AMI.
+
+This avoids hardcoding an AMI ID and ensures the latest image is used.
+
+---
+
+## What is a Data Source?
+
+A **Data Source** reads information from AWS without creating any resources.
+
+Examples:
+
+- Amazon Linux AMI
+- Availability Zones
+- Existing VPC
+- Existing Security Groups
+
+---
+
+## Open the File
+
+```bash
+nano data.tf
+```
+
+---
+
+## Add the Following Code
+
+```hcl
+data "aws_ami" "amazon_linux" {
+
+  most_recent = true
+
+  owners = ["amazon"]
+
+  filter {
+
+    name = "name"
+
+    values = ["al2023-ami-*-x86_64"]
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `data "aws_ami" "amazon_linux"` – Searches AWS for an Amazon Linux AMI.
+- `most_recent = true` – Selects the latest matching AMI.
+- `owners = ["amazon"]` – Searches only AWS-published AMIs.
+- `filter` – Matches Amazon Linux 2023 x86_64 AMIs.
+- `data.aws_ami.amazon_linux.id` – Returns the latest AMI ID for use in EC2 instances.
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+
+---
+# Step 11 - Create `user-data.sh`
+
+## Objective
+
+Create a User Data script to automatically install and configure the Apache web server when each EC2 instance starts.
+
+Each web server will display a different web page so you can see the Application Load Balancer distribute traffic between them.
+
+---
+
+## What is User Data?
+
+**User Data** is a shell script that runs automatically the first time an EC2 instance starts.
+
+It is commonly used to:
+
+- Update packages
+- Install software
+- Configure applications
+- Start services
+
+---
+
+## Open the File
+
+```bash
+nano user-data.sh
+```
+
+---
+
+## Add the Following Code
+
+```bash
+#!/bin/bash
+
+dnf update -y
+
+dnf install -y httpd
+
+systemctl enable httpd
+
+systemctl start httpd
+
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+cat <<EOF > /var/www/html/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Terraform ALB Lab</title>
+</head>
+<body>
+    <h1>Terraform AWS ALB Lab</h1>
+    <h2>Instance ID: $INSTANCE_ID</h2>
+    <p>This page is served through an Application Load Balancer.</p>
+</body>
+</html>
+EOF
+```
+
+---
+
+## Explanation
+
+- `#!/bin/bash` – Runs the script using the Bash shell.
+- `dnf update -y` – Updates installed packages.
+- `dnf install -y httpd` – Installs the Apache web server.
+- `systemctl enable httpd` – Starts Apache automatically after reboot.
+- `systemctl start httpd` – Starts the Apache service.
+- `INSTANCE_ID=$(...)` – Retrieves the EC2 instance ID from the Instance Metadata Service.
+- `cat <<EOF ... EOF` – Creates a web page displaying the instance ID.
+
+---
+
+## Why Display the Instance ID?
+
+When you refresh the ALB DNS name in your browser, the displayed **Instance ID** changes as the Application Load Balancer distributes requests between the two EC2 instances.
+
+Example:
+
+```text
+Refresh 1 → i-0123456789abcdef0
+
+Refresh 2 → i-0fedcba9876543210
+
+Refresh 3 → i-0123456789abcdef0
+```
+
+This confirms that the ALB is balancing traffic successfully.
+
+---
+
+## (Optional) Make the Script Executable
+
+```bash
+chmod +x user-data.sh
+```
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+
+- `terraform fmt` – Formats Terraform files.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
+- `terraform plan` – Shows the resources Terraform will create.
+
+---
+# Step 12 - Create `ec2.tf`
+
+## Objective
+
+Create two EC2 instances in different public subnets.
+
+These instances will host the Apache web server and receive traffic from the Application Load Balancer.
+
+---
+
+## Open the File
+
+```bash
+nano ec2.tf
+```
+
+---
+
+## Create Web Server 1
+
+Add the following configuration:
+
+```hcl
+resource "aws_instance" "web_1" {
+
+  ami = data.aws_ami.amazon_linux.id
+
+  instance_type = var.instance_type
+
+  subnet_id = aws_subnet.public_1.id
+
+  vpc_security_group_ids = [
+
+    aws_security_group.web.id
+
+  ]
+
+  key_name = var.key_name
+
+  user_data = file("${path.module}/user-data.sh")
+
+  tags = {
+
+    Name = "lab13-web-server-1"
+
+  }
+
+}
+```
+
+---
+
+## Create Web Server 2
+
+Add the following configuration below the previous resource:
+
+```hcl
+resource "aws_instance" "web_2" {
+
+  ami = data.aws_ami.amazon_linux.id
+
+  instance_type = var.instance_type
+
+  subnet_id = aws_subnet.public_2.id
+
+  vpc_security_group_ids = [
+
+    aws_security_group.web.id
+
+  ]
+
+  key_name = var.key_name
+
+  user_data = file("${path.module}/user-data.sh")
+
+  tags = {
+
+    Name = "lab13-web-server-2"
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `aws_instance.web_1` – Creates the first EC2 web server.
+- `aws_instance.web_2` – Creates the second EC2 web server.
+- `ami = data.aws_ami.amazon_linux.id` – Uses the latest Amazon Linux 2023 AMI.
+- `instance_type` – Uses the EC2 instance type from `terraform.tfvars`.
+- `subnet_id` – Launches each EC2 instance in a different public subnet.
+- `vpc_security_group_ids` – Attaches the Web Server Security Group.
+- `key_name` – Uses the existing AWS Key Pair.
+- `user_data` – Automatically installs Apache during the first boot.
+- `tags` – Adds a name to identify each EC2 instance.
+
+---
+
+## Architecture
+
+```text
+               Internet
+                   |
+                   |
+      Application Load Balancer
+             /             \
+            /               \
+     EC2 Web Server 1   EC2 Web Server 2
+       Public Subnet 1   Public Subnet 2
+```
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+# Step 13 - Create `alb.tf`
+
+## Objective
+
+Create an Internet-facing **Application Load Balancer (ALB)** that distributes incoming HTTP requests across both EC2 web servers.
+
+---
+
+## What is an Application Load Balancer?
+
+An **Application Load Balancer (ALB)** receives requests from users and distributes them across multiple EC2 instances.
+
+Benefits:
+
+- High Availability
+- Load Balancing
+- Health Checks
+- Fault Tolerance
+
+---
+
+## Architecture
+
+```text
+                  Internet
+                      |
+                      |
+        Application Load Balancer
+                      |
+             -------------------
+             |                 |
+             |                 |
+         EC2 Web 1        EC2 Web 2
+```
+
+---
+
+## Open the File
+
+```bash
+nano alb.tf
+```
+
+---
+
+# Step 13.1 - Create Target Group
+
+Add the following configuration:
+
+```hcl
+resource "aws_lb_target_group" "web" {
+
+  name = "lab13-target-group"
+
+  port = 80
+
+  protocol = "HTTP"
+
+  vpc_id = aws_vpc.main.id
+
+  health_check {
+
+    path = "/"
+
+    protocol = "HTTP"
+
+    matcher = "200"
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `aws_lb_target_group.web` – Creates a Target Group.
+- `port = 80` – Sends traffic to port 80 on the EC2 instances.
+- `protocol = "HTTP"` – Uses the HTTP protocol.
+- `health_check` – Verifies that each EC2 instance is healthy before sending traffic.
+
+---
+
+# Step 13.2 - Register EC2 Instances
+
+Add the following configuration below the Target Group:
+
+```hcl
+resource "aws_lb_target_group_attachment" "web_1" {
+
+  target_group_arn = aws_lb_target_group.web.arn
+
+  target_id = aws_instance.web_1.id
+
+  port = 80
+
+}
+
+resource "aws_lb_target_group_attachment" "web_2" {
+
+  target_group_arn = aws_lb_target_group.web.arn
+
+  target_id = aws_instance.web_2.id
+
+  port = 80
+
+}
+```
+
+---
+
+## Explanation
+
+These resources register both EC2 instances with the Target Group so the ALB can send traffic to them.
+
+---
+
+# Step 13.3 - Create the Application Load Balancer
+
+Add the following configuration below:
+
+```hcl
+resource "aws_lb" "main" {
+
+  name = "lab13-alb"
+
+  internal = false
+
+  load_balancer_type = "application"
+
+  security_groups = [
+
+    aws_security_group.alb.id
+
+  ]
+
+  subnets = [
+
+    aws_subnet.public_1.id,
+
+    aws_subnet.public_2.id
+
+  ]
+
+  tags = {
+
+    Name = "lab13-alb"
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `internal = false` – Creates an internet-facing ALB.
+- `load_balancer_type = "application"` – Creates an Application Load Balancer.
+- `security_groups` – Attaches the ALB Security Group.
+- `subnets` – Places the ALB in two public subnets for high availability.
+
+---
+
+# Step 13.4 - Create a Listener
+
+Add the following configuration below:
+
+```hcl
+resource "aws_lb_listener" "http" {
+
+  load_balancer_arn = aws_lb.main.arn
+
+  port = 80
+
+  protocol = "HTTP"
+
+  default_action {
+
+    type = "forward"
+
+    target_group_arn = aws_lb_target_group.web.arn
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `aws_lb_listener.http` – Creates an HTTP listener.
+- `port = 80` – Listens for HTTP requests.
+- `default_action` – Forwards all requests to the Target Group.
+
+---
+
+## Traffic Flow
+
+```text
+User
+
+↓
+
+Application Load Balancer
+
+↓
+
+Target Group
+
+↓
+
+EC2 Web Server 1
+
+or
+
+↓
+
+EC2 Web Server 2
+```
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+
+- `terraform fmt` – Formats Terraform files.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
+- `terraform plan` – Shows the resources Terraform will create.
+
+---
+
+# Step 14 - Create `outputs.tf`
+
+## Objective
+
+Display useful information after the infrastructure is created.
+
+Terraform Outputs allow you to quickly access important resource details without opening the AWS Console.
+
+---
+
+## Open the File
+
+```bash
+nano outputs.tf
+```
+
+---
+
+## Add the Following Code
+
+```hcl
+output "vpc_id" {
+
+  description = "VPC ID"
+
+  value = aws_vpc.main.id
+
+}
+
+output "public_subnet_1_id" {
+
+  description = "Public Subnet 1 ID"
+
+  value = aws_subnet.public_1.id
+
+}
+
+output "public_subnet_2_id" {
+
+  description = "Public Subnet 2 ID"
+
+  value = aws_subnet.public_2.id
+
+}
+
+output "web_server_1_public_ip" {
+
+  description = "Public IP of Web Server 1"
+
+  value = aws_instance.web_1.public_ip
+
+}
+
+output "web_server_2_public_ip" {
+
+  description = "Public IP of Web Server 2"
+
+  value = aws_instance.web_2.public_ip
+
+}
+
+output "alb_dns_name" {
+
+  description = "Application Load Balancer DNS Name"
+
+  value = aws_lb.main.dns_name
+
+}
+```
+
+---
+
+## Explanation
+
+- `vpc_id` – Displays the VPC ID.
+- `public_subnet_1_id` – Displays the first public subnet ID.
+- `public_subnet_2_id` – Displays the second public subnet ID.
+- `web_server_1_public_ip` – Displays the public IP address of the first EC2 instance.
+- `web_server_2_public_ip` – Displays the public IP address of the second EC2 instance.
+- `alb_dns_name` – Displays the DNS name of the Application Load Balancer.
+
+---
+
+## Apply the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+terraform apply
+```
+
+Type:
+
+```text
+yes
+```
+
+Wait until you see:
+
+```text
+Apply complete!
+```
+
+---
+
+## Verify the Application
+
+Display the outputs:
+
+```bash
+terraform output
+```
+
+Example:
+
+```text
+alb_dns_name = "lab13-alb-123456789.ap-south-1.elb.amazonaws.com"
+```
+
+Open the ALB DNS name in your browser:
+
+```text
+http://<alb_dns_name>
+```
+
+Refresh the page several times.
+
+You should see the **Instance ID** change as the Application Load Balancer distributes traffic between the two EC2 instances.
+
+---
+
+## Architecture
+
+```text
+                 Internet
+                     |
+                     |
+        Application Load Balancer
+                     |
+             -------------------
+             |                 |
+             |                 |
+      EC2 Web Server 1   EC2 Web Server 2
+```
+
+---
+
+## Summary
+
+You created:
+
+- VPC
+- Two Public Subnets
+- Internet Gateway
+- Public Route Table
+- Two EC2 Web Servers
+- Security Groups
+- Application Load Balancer
+- Target Group
+- Listener
+- Outputs
+
+You also learned:
+
+- High Availability
+- Load Balancing
+- Health Checks
+- Target Groups
+- Application Load Balancer (ALB)
+
+---
+# Lab Cleanup
+
+## Step 1 - Destroy AWS Resources
+
+Run:
+
+```bash
+terraform destroy
+```
+
+Type:
+
+```text
+yes
+```
+
+Wait until you see:
+
+```text
+Destroy complete!
+```
+
+---
+
+## Step 2 - Verify AWS Console
+
+Confirm the following resources have been deleted:
+
+- Application Load Balancer
+- Target Group
+- Listener
+- EC2 Instances
+- Security Groups
+- Route Table
+- Internet Gateway
+- Subnets
+- VPC
+
+---
+
+## Step 3 - Remove Local Terraform Files
+
+Run:
+
+```bash
+rm -rf .terraform
+
+rm -f .terraform.lock.hcl
+
+rm -f terraform.tfstate
+
+rm -f terraform.tfstate.backup
+
+rm -f crash.log
+```
+
+> **Note:** These commands remove only local Terraform state and cache files. Your `.tf` configuration files remain unchanged.
+
+---
+
+## Step 4 - Verify Cleanup
+
+Run:
+
+```bash
+ls -la
+```
+
+Verify that your Terraform configuration files are still present:
+
+```text
+alb.tf
+data.tf
+ec2.tf
+igw.tf
+outputs.tf
+provider.tf
+route-table.tf
+security-group.tf
+subnet.tf
+terraform.tfvars
+user-data.sh
+variables.tf
+versions.tf
+vpc.tf
+```
+
+---
+
+## Step 5 - Check Git Status
+
+Run:
+
+```bash
+git status
+```
+
+Review the changes before committing.
+
+---
+
+## Step 6 - Commit Changes
+
+```bash
+git add .
+
+git commit -m "Complete Lab 13 Application Load Balancer"
+```
+
+---
+
+## Step 7 - Push to GitHub
+
+```bash
+git push origin main
+```
+
+---
+
+# Lab Completed
+
+You learned:
+
+- Application Load Balancer (ALB)
+- Target Groups
+- Listeners
+- Health Checks
+- Multiple Public Subnets
+- High Availability
+- Traffic Distribution Across EC2 Instances
+- Terraform Outputs
+- Infrastructure Cleanup
