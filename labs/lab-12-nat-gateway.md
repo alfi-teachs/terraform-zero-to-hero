@@ -308,6 +308,14 @@ resource "aws_vpc" "main" {
 
 }
 ```
+### Explanation
+
+- `resource "aws_vpc" "main"` – Creates a new VPC.
+- `cidr_block = var.vpc_cidr` – Defines the IP address range for the VPC.
+- `enable_dns_support = true` – Enables DNS resolution within the VPC.
+- `enable_dns_hostnames = true` – Assigns DNS hostnames to EC2 instances launched in the VPC.
+- `tags` – Adds a name to help identify the VPC.
+
 Enable DNS Hostnames
 ```bash
 enable_dns_hostnames = true
@@ -321,6 +329,7 @@ Without this setting:
 ```bash
 No hostname assigned
 ```
+### Validate the Configuration 
 After vpc.tf
 ```bash
 terraform fmt
