@@ -118,12 +118,23 @@ terraform {
 
 }
 ```
+### Explanation
+
+- `terraform {}` – Defines Terraform project settings.
+- `required_version` – Ensures Terraform version **1.5.0 or later** is used.
+- `required_providers` – Specifies the providers required by the project.
+- `source = "hashicorp/aws"` – Downloads the official AWS provider from HashiCorp.
+- `version = "~> 6.0"` – Uses AWS Provider **6.x** and prevents automatic upgrades to **7.x**.
+- 
 After versions.tf
 ```bash
 terraform fmt
 terraform init
 terraform validate
 ```
+- `terraform fmt` – Formats Terraform files.
+- `terraform init` – Initializes the project and downloads the AWS provider.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
 
 ## Step 2 – Create provider.tf
 Open it:
