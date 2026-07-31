@@ -521,406 +521,76 @@ terraform validate
 terraform plan
 ```
 
-# Step 9 - Create Route Tables
+## Step 9 - Create `route-table.tf`
 
-## Objective
+### What is a Route Table?
 
-In this step, you will create:
+A **Route Table** controls how network traffic is routed within a VPC.
 
-- Public Route Table
-- Private Route Table
-- Public Route
-- Private Route
-- Route Table Associations
-
-These route tables control how traffic moves inside the VPC.
-
----
-
-# Network Diagram
-
-```
-                    Internet
-                        |
-                        |
-                Internet Gateway
-                        |
-                Public Route Table
-                        |
-         --------------------------------
-         |                              |
-         |                              |
-   Public Subnet                 NAT Gateway
-                                        |
-                                        |
-                              Private Route Table
-                                        |
-                                        |
-                                Private Subnet
-```
-
----
-
-Open:
+Create the file:
 
 ```bash
 nano route-table.tf
 ```
----
 
-# Step 9.1 Create Public Route Table
-
-Paste:
+Add the following configuration:
 
 ```hcl
 resource "aws_route_table" "public" {
-
   vpc_id = aws_vpc.main.id
 
   route {
-
     cidr_block = "0.0.0.0/0"
-
     gateway_id = aws_internet_gateway.main.id
-
   }
 
   tags = {
-
     Name = "lab13-public-route-table"
+  }
+}
 
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
   }
 
+  tags = {
+    Name = "lab13-private-route-table"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
 }
 ```
-After route-table.tf
+
+### Explanation
+
+- `aws_route_table.public` – Creates a route table for the public subnet.
+- `gateway_id = aws_internet_gateway.main.id` – Routes internet traffic through the Internet Gateway.
+- `aws_route_table_association.public` – Associates the public subnet with the public route table.
+- `aws_route_table.private` – Creates a route table for the private subnet.
+- `nat_gateway_id = aws_nat_gateway.main.id` – Routes internet traffic through the NAT Gateway.
+- `aws_route_table_association.private` – Associates the private subnet with the private route table.
+
+### Validate the Configuration
+
+Run the following commands:
+
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
-
----
-
-## Explanation
-
-### Create Route Table
-
-```hcl
-resource "aws_route_table" "public"
-```
-
-Creates the Public Route Table.
-
-Terraform reference:
-
-```hcl
-aws_route_table.public.id
-```
-
----
-
-### Route
-
-```hcl
-route {
-
-  cidr_block = "0.0.0.0/0"
-
-  gateway_id = aws_internet_gateway.main.id
-
-}
-```
-
-Meaning:
-
-```
-Any Destination
-
-↓
-
-Internet Gateway
-```
-
-So any Internet traffic goes to the Internet Gateway.
-
----
-
-# Step 9.2 Associate Public Subnet
-
-Paste below the previous resource.
-
-```hcl
-resource "aws_route_table_association" "public" {
-
-  subnet_id = aws_subnet.public.id
-
-  route_table_id = aws_route_table.public.id
-
-}
-```
-
----
-
-## Explanation
-
-Connects:
-
-```
-Public Subnet
-
-↓
-
-Public Route Table
-```
-
-Now every EC2 inside the Public Subnet uses this route table.
-
----
-
-# Step 9.3 Create Private Route Table
-
-Paste below.
-
-```hcl
-resource "aws_route_table" "private" {
-
-  vpc_id = aws_vpc.main.id
-
-  route {
-
-    cidr_block = "0.0.0.0/0"
-
-    nat_gateway_id = aws_nat_gateway.main.id
-
-  }
-
-  tags = {
-
-    Name = "lab13-private-route-table"
-
-  }
-
-}
-```
-
----
-
-## Explanation
-
-Notice the difference.
-
-Public Route Table:
-
-```hcl
-gateway_id = aws_internet_gateway.main.id
-```
-
-Private Route Table:
-
-```hcl
-nat_gateway_id = aws_nat_gateway.main.id
-```
-
-Private servers reach the Internet through the NAT Gateway instead of directly through the Internet Gateway.
-
----
-
-# Step 9.4 Associate Private Subnet
-
-Paste below.
-
-```hcl
-resource "aws_route_table_association" "private" {
-
-  subnet_id = aws_subnet.private.id
-
-  route_table_id = aws_route_table.private.id
-
-}
-```
-
----
-
-## Explanation
-
-Connects:
-
-```
-Private Subnet
-
-↓
-
-Private Route Table
-```
-
----
-
-# Final route-table.tf
-
-```hcl
-resource "aws_route_table" "public" {
-
-  vpc_id = aws_vpc.main.id
-
-  route {
-
-    cidr_block = "0.0.0.0/0"
-
-    gateway_id = aws_internet_gateway.main.id
-
-  }
-
-  tags = {
-
-    Name = "lab13-public-route-table"
-
-  }
-
-}
-
-resource "aws_route_table_association" "public" {
-
-  subnet_id = aws_subnet.public.id
-
-  route_table_id = aws_route_table.public.id
-
-}
-
-resource "aws_route_table" "private" {
-
-  vpc_id = aws_vpc.main.id
-
-  route {
-
-    cidr_block = "0.0.0.0/0"
-
-    nat_gateway_id = aws_nat_gateway.main.id
-
-  }
-
-  tags = {
-
-    Name = "lab13-private-route-table"
-
-  }
-
-}
-
-resource "aws_route_table_association" "private" {
-
-  subnet_id = aws_subnet.private.id
-
-  route_table_id = aws_route_table.private.id
-
-}
-```
-
----
-
-# Traffic Flow
-
-## Public EC2
-
-```
-Public EC2
-
-↓
-
-Public Route Table
-
-↓
-
-Internet Gateway
-
-↓
-
-Internet
-```
-
----
-
-## Private EC2
-
-```
-Private EC2
-
-↓
-
-Private Route Table
-
-↓
-
-NAT Gateway
-
-↓
-
-Internet Gateway
-
-↓
-
-Internet
-```
-
----
-
-# Validate Configuration
-
-Run:
-
-```bash
-terraform fmt
-```
-
----
-
-Run:
-
-```bash
-terraform validate
-```
-
-Expected:
-
-```
-Success! The configuration is valid.
-```
-
----
-
-Run:
-
-```bash
-terraform plan
-```
-
-Terraform should show resources similar to:
-
-```
-aws_vpc.main
-
-aws_subnet.public
-
-aws_subnet.private
-
-aws_internet_gateway.main
-
-aws_eip.nat
-
-aws_nat_gateway.main
-
-aws_route_table.public
-
-aws_route_table.private
-
-aws_route_table_association.public
-
-aws_route_table_association.private
-```
-
-Do not run `terraform apply` yet. We'll first create the remaining files (`data.tf`, `security-group.tf`, `ec2.tf`, `outputs.tf`, and `user-data.sh`) so Terraform can create the entire infrastructure in one apply.
-
-
 # Step 10 - Create data.tf
 
 ## Objective
