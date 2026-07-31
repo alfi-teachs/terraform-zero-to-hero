@@ -591,278 +591,50 @@ terraform fmt
 terraform validate
 terraform plan
 ```
-# Step 10 - Create data.tf
+## Step 10 - Create `data.tf`
 
-## Objective
+### What is a Data Source?
 
-In this step you will learn how to use a **Terraform Data Source**.
+A **Data Source** reads existing information from AWS instead of creating new resources.
 
-Instead of manually copying an AMI ID from the AWS Console, Terraform will automatically find the latest Amazon Linux 2023 AMI.
-
-This makes your Terraform code portable across AWS regions and easier to maintain.
-
----
-
-# What is a Data Source?
-
-Terraform has two main concepts:
-
-## Resources
-
-Resources create infrastructure.
-
-Examples:
-
-- VPC
-- EC2
-- Subnet
-- NAT Gateway
-
-Example:
-
-```hcl
-resource "aws_vpc" "main" {
-```
-
----
-
-## Data Sources
-
-Data Sources **read existing information** from AWS.
-
-Examples:
-
-- Latest Amazon Linux AMI
-- Availability Zones
-- Existing VPC
-- Existing Security Group
-
-Example:
-
-```hcl
-data "aws_ami" "amazon_linux" {
-```
-
-Data Sources do **not** create resources.
-
-They only fetch information.
-
----
-
-# Why Not Hardcode an AMI?
-
-Bad example:
-
-```hcl
-ami = "ami-0123456789abcdef0"
-```
-
-Problems:
-
-- Different in every AWS Region
-- Changes over time
-- May eventually be removed
-
-Better approach:
-
-Terraform searches AWS and automatically finds the latest AMI.
-
----
-
-Open:
+Create the file:
 
 ```bash
 nano data.tf
 ```
----
 
-# Paste the Following Code
+Add the following configuration:
 
 ```hcl
 data "aws_ami" "amazon_linux" {
-
   most_recent = true
 
   owners = ["amazon"]
 
   filter {
-
-    name = "name"
-
+    name   = "name"
     values = ["al2023-ami-*-x86_64"]
-
   }
-
 }
 ```
 
----
+### Explanation
 
-# Explanation
+- `data "aws_ami" "amazon_linux"` – Finds an existing Amazon Linux AMI.
+- `most_recent = true` – Selects the latest matching AMI.
+- `owners = ["amazon"]` – Searches only AWS-published AMIs.
+- `filter` – Finds Amazon Linux 2023 x86_64 AMIs that match the specified name pattern.
+- `data.aws_ami.amazon_linux.id` – Returns the latest AMI ID, which can be used when creating an EC2 instance.
 
-## Data Block
+### Validate the Configuration
 
-```hcl
-data "aws_ami" "amazon_linux"
-```
-
-Terraform searches AWS for an AMI.
-
-Reference name:
-
-```hcl
-data.aws_ami.amazon_linux.id
-```
-
----
-
-## most_recent
-
-```hcl
-most_recent = true
-```
-
-If AWS has multiple matching AMIs:
-
-```
-Old
-
-↓
-
-New
-
-↓
-
-Newest
-```
-
-Terraform automatically selects the newest one.
-
----
-
-## owners
-
-```hcl
-owners = ["amazon"]
-```
-
-Only search for AMIs published by AWS.
-
-This prevents accidentally using an image published by another AWS account.
-
----
-
-## Filter
-
-```hcl
-filter {
-
-  name = "name"
-
-  values = ["al2023-ami-*-x86_64"]
-
-}
-```
-
-Terraform searches for images whose names match:
-
-```
-al2023-ami-*
-```
-
-Examples:
-
-```
-al2023-ami-2023.7.20250721-x86_64
-
-al2023-ami-2023.6.20250618-x86_64
-```
-
-Terraform picks the latest matching image.
-
----
-
-# How We Will Use It
-
-Later, inside `ec2.tf`, we will write:
-
-```hcl
-ami = data.aws_ami.amazon_linux.id
-```
-
-Terraform will replace it with the latest AMI ID automatically.
-
-Example:
-
-```
-ami-0abc123456789def0
-```
-
-You never need to update your Terraform code when AWS releases a new Amazon Linux 2023 AMI.
-
----
-
-# Verify
-
-Run:
+Run the following commands:
 
 ```bash
-cat data.tf
+terraform fmt
+terraform validate
+terraform plan
 ```
-
-Expected:
-
-```hcl
-data "aws_ami" "amazon_linux" {
-
-  most_recent = true
-
-  owners = ["amazon"]
-
-  filter {
-
-    name = "name"
-
-    values = ["al2023-ami-*-x86_64"]
-
-  }
-
-}
-```
-
----
-
-# Current Project Structure
-
-```
----
-
-# Summary
-
-In this step you learned:
-
-- What a Data Source is
-- Difference between Resources and Data Sources
-- How to automatically find the latest Amazon Linux AMI
-- Why using a Data Source is better than hardcoding an AMI ID
-
----
-
-# Next Step
-
-Next we will create:
-
-## security-group.tf
-
-You will learn:
-
-- Security Groups
-- Inbound Rules
-- Outbound Rules
-- SSH (Port 22)
-- HTTP (Port 80)
-- ICMP (Ping)
-- Security Group best practices
 
 # Step 11 - Create `security-group.tf`
 
