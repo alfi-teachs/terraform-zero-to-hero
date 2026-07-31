@@ -743,7 +743,6 @@ Run:
 ```bash
 terraform fmt
 ```
-
 ---
 
 # Step 14 - Validate
@@ -759,7 +758,6 @@ Expected:
 ```
 Success! The configuration is valid.
 ```
-
 ---
 
 # Step 15 - Plan
@@ -785,7 +783,6 @@ Terraform should show resources similar to:
 
 + aws_route_table_association.public
 ```
-
 ---
 
 # Step 16 - Apply
