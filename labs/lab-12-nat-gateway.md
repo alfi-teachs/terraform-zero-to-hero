@@ -636,288 +636,107 @@ terraform validate
 terraform plan
 ```
 
-# Step 11 - Create `security-group.tf`
+## Step 11 - Create `security-group.tf`
 
-## Objective
+### What is a Security Group?
 
-Create Security Groups for:
+A **Security Group** is a virtual firewall that controls inbound and outbound traffic for AWS resources.
 
-- Bastion Host (Public EC2)
-- Private EC2
-
-A Security Group acts as a virtual firewall that controls inbound and outbound traffic.
-
----
-
-## What We Will Create
-
-| Security Group | Purpose |
-|---------------|---------|
-| `bastion-sg` | Allow SSH from your computer |
-| `private-ec2-sg` | Allow SSH only from the Bastion Host |
-
----
-
-Open the file:
+Create the file:
 
 ```bash
 nano security-group.tf
 ```
 
----
-
-## Bastion Host Security Group
-
-Paste the following:
+Add the following configuration:
 
 ```hcl
 resource "aws_security_group" "bastion" {
-
   name        = "lab13-bastion-sg"
-
   description = "Security Group for Bastion Host"
-
   vpc_id      = aws_vpc.main.id
 
   ingress {
-
     description = "SSH from Anywhere"
-
-    from_port = 22
-
-    to_port = 22
-
-    protocol = "tcp"
-
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-
   }
 
   egress {
-
-    from_port = 0
-
-    to_port = 0
-
-    protocol = "-1"
-
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-
   }
 
   tags = {
-
     Name = "lab13-bastion-sg"
+  }
+}
 
+resource "aws_security_group" "private" {
+  name        = "lab13-private-sg"
+  description = "Private EC2 Security Group"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "SSH from Bastion Host"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+
+    security_groups = [
+      aws_security_group.bastion.id
+    ]
   }
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "lab13-private-sg"
+  }
 }
 ```
 
----
-After security-group.tf
+### Explanation
+
+- `aws_security_group.bastion` – Creates a Security Group for the Bastion Host.
+- `ingress` – Allows SSH (port 22) from anywhere (`0.0.0.0/0`) for this lab.
+- `egress` – Allows all outbound traffic.
+- `aws_security_group.private` – Creates a Security Group for the Private EC2 instance.
+- `security_groups = [aws_security_group.bastion.id]` – Allows SSH only from the Bastion Host Security Group.
+
+> **Note:** In production, replace `0.0.0.0/0` with your public IP address to improve security.
+
+### Validate the Configuration
+
+Run the following commands:
+
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
-## Explanation
+## Step 12 - Create `user-data.sh`
 
-### Name
+### What is User Data?
 
-```hcl
-name = "lab13-bastion-sg"
-```
+**User Data** is a shell script that runs automatically the first time an EC2 instance starts. It is commonly used to install software and configure the instance.
 
-Security Group name shown in AWS.
-
----
-
-### VPC
-
-```hcl
-vpc_id = aws_vpc.main.id
-```
-
-Creates the Security Group inside our VPC.
-
----
-
-### Ingress Rule
-
-```hcl
-from_port = 22
-
-to_port = 22
-
-protocol = "tcp"
-```
-
-Allows SSH connections.
-
----
-
-### CIDR Block
-
-```hcl
-cidr_blocks = ["0.0.0.0/0"]
-```
-
-Allows SSH from anywhere.
-
-> **Note:** This is acceptable for a learning lab. In production, restrict this to your public IP address (for example, `203.0.113.10/32`) instead of allowing the whole internet.
-
----
-
-### Egress
-
-```hcl
-protocol = "-1"
-```
-
-Allows all outbound traffic.
-
----
-
-## Private EC2 Security Group
-
-Paste below the previous resource.
-
-```hcl
-resource "aws_security_group" "private" {
-
-  name        = "lab13-private-sg"
-
-  description = "Private EC2 Security Group"
-
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-
-    description = "SSH from Bastion Host"
-
-    from_port = 22
-
-    to_port = 22
-
-    protocol = "tcp"
-
-    security_groups = [
-
-      aws_security_group.bastion.id
-
-    ]
-
-  }
-
-  egress {
-
-    from_port = 0
-
-    to_port = 0
-
-    protocol = "-1"
-
-    cidr_blocks = ["0.0.0.0/0"]
-
-  }
-
-  tags = {
-
-    Name = "lab13-private-sg"
-
-  }
-
-}
-```
-
----
-
-## Explanation
-
-### Why Use `security_groups`?
-
-Instead of allowing SSH from an IP address, we allow SSH from another Security Group.
-
-```hcl
-security_groups = [
-
-  aws_security_group.bastion.id
-
-]
-```
-
-This means:
-
-- The Bastion Host can SSH to the Private EC2.
-- Your laptop cannot SSH directly to the Private EC2.
-- The Private EC2 has no direct SSH exposure to the internet.
-
-This is a common production pattern.
-
----
-
-## Verify
-
-Run:
-
-```bash
-cat security-group.tf
-```
-
----
-
-## Summary
-
-You created two Security Groups:
-
-- **Bastion Security Group**
-  - Allows SSH from the internet (for this lab).
-  - Allows all outbound traffic.
-
-- **Private EC2 Security Group**
-  - Allows SSH only from the Bastion Host.
-  - Allows all outbound traffic.
-
-These Security Groups prepare the network for launching the Bastion Host and the Private EC2 instance.
-
----
-
-## Next Step
-
-Next we will create **`user-data.sh`**, which automatically installs software when the EC2 instances start.
-
-# Step 12 - Create `user-data.sh`
-
-## Objective
-
-Create a User Data script that automatically updates the EC2 instance and installs the Apache web server when it launches.
-
----
-
-## What is User Data?
-
-User Data is a shell script that EC2 runs automatically during the first boot.
-
-Common use cases:
-
-- Install packages
-- Update the operating system
-- Install web servers
-- Configure applications
-- Start services
-
----
-
-Open the file:
+Create the file:
 
 ```bash
 nano user-data.sh
 ```
 
----
-
-## Add the Following Code
+Add the following script:
 
 ```bash
 #!/bin/bash
@@ -949,591 +768,180 @@ cat <<EOF > /var/www/html/index.html
 EOF
 ```
 
----
+### Explanation
 
-## Explanation
+- `#!/bin/bash` – Runs the script using the Bash shell.
+- `dnf update -y` – Updates installed packages.
+- `dnf install -y httpd` – Installs the Apache web server.
+- `systemctl start httpd` – Starts the Apache service.
+- `systemctl enable httpd` – Starts Apache automatically after reboot.
+- `cat <<EOF ... EOF` – Creates the default `index.html` web page.
 
-### Shebang
-
-```bash
-#!/bin/bash
-```
-
-Tells Linux to execute this file using the Bash shell.
-
----
-After user-data.sh
-```bash
-terraform fmt
-terraform validate
-terraform plan
-```
-### Update Packages
-
-```bash
-dnf update -y
-```
-
-Updates all installed packages to the latest available versions.
-
-The `-y` option automatically answers "yes" to prompts.
-
----
-
-### Install Apache
-
-```bash
-dnf install -y httpd
-```
-
-Installs the Apache HTTP Server.
-
----
-
-### Start Apache
-
-```bash
-systemctl start httpd
-```
-
-Starts the Apache service immediately.
-
----
-
-### Enable Apache
-
-```bash
-systemctl enable httpd
-```
-
-Ensures Apache starts automatically after every reboot.
-
----
-
-### Create Web Page
-
-```bash
-cat <<EOF > /var/www/html/index.html
-...
-EOF
-```
-
-Creates a simple HTML page that will be served by Apache.
-
----
-
-## Make the Script Executable (Optional)
-
-Run:
+### (Optional) Make the Script Executable
 
 ```bash
 chmod +x user-data.sh
 ```
 
-This isn't required by Terraform when using the `file()` function, but it's a good habit if you also want to run the script manually.
+### Validate the Configuration
 
----
+Run the following commands:
 
-## Verify
-
-Display the file:
-
-```bash
-cat user-data.sh
-```
-
----
-
-## Summary
-
-In this step you created a User Data script that:
-
-- Updates the operating system
-- Installs Apache
-- Starts the Apache service
-- Enables Apache on boot
-- Creates a default web page
-
-In the next step, we'll attach this script to the EC2 instance so it runs automatically during instance creation.
-
-# Step 13 - Create `ec2.tf`
-
-## Objective
-
-Create two EC2 instances:
-
-- Bastion Host (Public Subnet)
-- Private EC2 (Private Subnet)
-
-The Bastion Host will be used to SSH into the Private EC2.
-
----
-
-Open:
-
-```bash
-nano ec2.tf
-```
-
-# Bastion Host
-
-Paste the following code.
-
-```hcl
-resource "aws_instance" "bastion" {
-
-  ami = data.aws_ami.amazon_linux.id
-
-  instance_type = var.instance_type
-
-  subnet_id = aws_subnet.public.id
-
-  vpc_security_group_ids = [
-
-    aws_security_group.bastion.id
-
-  ]
-
-  key_name = var.key_name
-
-  user_data = file("${path.module}/user-data.sh")
-
-  tags = {
-
-    Name = "lab13-bastion-host"
-
-  }
-
-}
-```
-After ec2.tf
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
+## Step 13 - Create `ec2.tf`
 
+### What is an EC2 Instance?
 
----
+An **EC2 instance** is a virtual server in AWS used to run applications.
 
-## Explanation
-
-### AMI
-
-```hcl
-ami = data.aws_ami.amazon_linux.id
-```
-
-Uses the latest Amazon Linux 2023 AMI from `data.tf`.
-
----
-
-### Instance Type
-
-```hcl
-instance_type = var.instance_type
-```
-
-Reads the value from:
-
-```hcl
-terraform.tfvars
-```
-
-Example:
-
-```hcl
-instance_type = "t2.micro"
-```
-
----
-
-### Subnet
-
-```hcl
-subnet_id = aws_subnet.public.id
-```
-
-Launches the Bastion Host inside the Public Subnet.
-
----
-
-### Security Group
-
-```hcl
-vpc_security_group_ids = [
-
-  aws_security_group.bastion.id
-
-]
-```
-
-Attaches the Bastion Security Group.
-
----
-
-### Key Pair
-
-```hcl
-key_name = var.key_name
-```
-
-Uses the AWS Key Pair that already exists in your account.
-
-Example:
-
-```hcl
-key_name = "terraform-key"
-```
-
----
-
-### User Data
-
-```hcl
-user_data = file("${path.module}/user-data.sh")
-```
-
-Reads the contents of `user-data.sh` and runs it during the first boot of the EC2 instance.
-
----
-
-### Tags
-
-```hcl
-tags = {
-
-  Name = "lab13-bastion-host"
-
-}
-```
-
-This name appears in the AWS Console.
-
----
-
-# Private EC2
-
-Paste the following below the Bastion Host resource.
-
-```hcl
-resource "aws_instance" "private" {
-
-  ami = data.aws_ami.amazon_linux.id
-
-  instance_type = var.instance_type
-
-  subnet_id = aws_subnet.private.id
-
-  vpc_security_group_ids = [
-
-    aws_security_group.private.id
-
-  ]
-
-  key_name = var.key_name
-
-  tags = {
-
-    Name = "lab13-private-server"
-
-  }
-
-}
-```
-
----
-
-## Explanation
-
-This EC2 instance is similar to the Bastion Host, but with two important differences.
-
-### Private Subnet
-
-```hcl
-subnet_id = aws_subnet.private.id
-```
-
-This launches the instance in the Private Subnet.
-
-It will not receive a public IP address because:
-
-- The subnet does not assign public IPs.
-- It has no direct route to the Internet Gateway.
-
----
-
-### Security Group
-
-```hcl
-aws_security_group.private.id
-```
-
-Only the Bastion Host is allowed to SSH into this instance.
-
-Your laptop cannot connect directly.
-
----
-
-## Verify
-
-Run:
+Create the file:
 
 ```bash
-cat ec2.tf
+nano ec2.tf
 ```
 
----
+Add the following configuration:
 
-## Summary
+```hcl
+resource "aws_instance" "bastion" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.bastion.id]
+  key_name               = var.key_name
+  user_data              = file("${path.module}/user-data.sh")
 
-This file creates:
+  tags = {
+    Name = "lab13-bastion-host"
+  }
+}
 
-- 1 Bastion Host in the Public Subnet
-- 1 Private EC2 in the Private Subnet
-- Uses the latest Amazon Linux 2023 AMI
-- Uses the existing AWS Key Pair
-- Attaches the correct Security Groups
-- Runs the User Data script on the Bastion Host
+resource "aws_instance" "private" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.private.id
+  vpc_security_group_ids = [aws_security_group.private.id]
+  key_name               = var.key_name
 
-# Step 14 - Create `outputs.tf`
+  tags = {
+    Name = "lab13-private-server"
+  }
+}
+```
 
-## Objective
+### Explanation
 
-Terraform Outputs display useful information after infrastructure is created.
+- `aws_instance.bastion` – Creates a Bastion Host in the public subnet.
+- `aws_instance.private` – Creates a Private EC2 instance in the private subnet.
+- `ami = data.aws_ami.amazon_linux.id` – Uses the latest Amazon Linux 2023 AMI.
+- `instance_type` – Uses the EC2 instance type from `terraform.tfvars`.
+- `subnet_id` – Launches the instance in the specified subnet.
+- `vpc_security_group_ids` – Attaches the appropriate Security Group.
+- `key_name` – Uses an existing AWS Key Pair for SSH access.
+- `user_data = file("${path.module}/user-data.sh")` – Runs the User Data script when the Bastion Host starts.
+- `tags` – Adds a name to identify the EC2 instance in the AWS Console.
 
-Instead of searching the AWS Console, Terraform prints important values directly in the terminal.
+### Validate the Configuration
 
----
-Open the file:
+Run the following commands:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+## Step 14 - Create `outputs.tf`
+
+### What are Terraform Outputs?
+
+**Outputs** display useful information about the infrastructure after `terraform apply` completes.
+
+Create the file:
 
 ```bash
 nano outputs.tf
 ```
 
----
-
-# Add the Following Code
+Add the following configuration:
 
 ```hcl
 output "vpc_id" {
-
   description = "VPC ID"
-
-  value = aws_vpc.main.id
-
+  value       = aws_vpc.main.id
 }
 
 output "public_subnet_id" {
-
   description = "Public Subnet ID"
-
-  value = aws_subnet.public.id
-
+  value       = aws_subnet.public.id
 }
 
 output "private_subnet_id" {
-
   description = "Private Subnet ID"
-
-  value = aws_subnet.private.id
-
+  value       = aws_subnet.private.id
 }
 
 output "internet_gateway_id" {
-
   description = "Internet Gateway ID"
-
-  value = aws_internet_gateway.main.id
-
+  value       = aws_internet_gateway.main.id
 }
 
 output "nat_gateway_id" {
-
   description = "NAT Gateway ID"
-
-  value = aws_nat_gateway.main.id
-
+  value       = aws_nat_gateway.main.id
 }
 
 output "bastion_public_ip" {
-
   description = "Public IP of Bastion Host"
-
-  value = aws_instance.bastion.public_ip
-
+  value       = aws_instance.bastion.public_ip
 }
 
 output "bastion_public_dns" {
-
   description = "Public DNS of Bastion Host"
-
-  value = aws_instance.bastion.public_dns
-
+  value       = aws_instance.bastion.public_dns
 }
 
 output "private_instance_private_ip" {
-
   description = "Private IP of Private EC2"
-
-  value = aws_instance.private.private_ip
-
+  value       = aws_instance.private.private_ip
 }
 ```
-After outputs.tf
+
+### Explanation
+
+- `output` – Displays resource information after `terraform apply`.
+- `value` – Specifies the resource attribute to display.
+- `vpc_id` – Displays the VPC ID.
+- `public_subnet_id` – Displays the Public Subnet ID.
+- `private_subnet_id` – Displays the Private Subnet ID.
+- `internet_gateway_id` – Displays the Internet Gateway ID.
+- `nat_gateway_id` – Displays the NAT Gateway ID.
+- `bastion_public_ip` – Displays the Bastion Host's public IP address.
+- `bastion_public_dns` – Displays the Bastion Host's public DNS name.
+- `private_instance_private_ip` – Displays the Private EC2 instance's private IP address.
+
+### Apply the Configuration
+
+Run the following commands:
+
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 terraform apply
 ```
----
 
-# Explanation
-
-## Output Block
-
-```hcl
-output "vpc_id" {
-
-  value = aws_vpc.main.id
-
-}
-```
-
-After `terraform apply`, Terraform prints the VPC ID.
-
-Example:
-
-```
-vpc_id = "vpc-0123456789abcdef0"
-```
-
----
-
-## Public Subnet ID
-
-```hcl
-output "public_subnet_id"
-```
-
-Displays the ID of the Public Subnet.
-
-Example:
-
-```
-subnet-0a12bc34de56fg789
-```
-
----
-
-## Private Subnet ID
-
-```hcl
-output "private_subnet_id"
-```
-
-Displays the ID of the Private Subnet.
-
----
-
-## Internet Gateway ID
-
-```hcl
-output "internet_gateway_id"
-```
-
-Displays the Internet Gateway ID.
-
----
-
-## NAT Gateway ID
-
-```hcl
-output "nat_gateway_id"
-```
-
-Displays the NAT Gateway ID.
-
----
-
-## Bastion Public IP
-
-```hcl
-output "bastion_public_ip"
-```
-
-Example:
-
-```
-43.205.120.15
-```
-
-You'll use this IP to SSH into the Bastion Host.
-
----
-
-## Bastion Public DNS
-
-```hcl
-output "bastion_public_dns"
-```
-
-Example:
-
-```
-ec2-43-205-120-15.ap-south-1.compute.amazonaws.com
-```
-
-You can SSH using either the IP address or the DNS name.
-
----
-
-## Private EC2 Private IP
-
-```hcl
-output "private_instance_private_ip"
-```
-
-Example:
-
-```
-10.0.2.145
-```
-
-This IP is only reachable from within the VPC, such as from the Bastion Host.
-
----
-
-# Verify
-
-Run:
-
-```bash
-cat outputs.tf
-```
-
----
-
-# Summary
-
-This file prints important information after deployment:
-
-- VPC ID
-- Public Subnet ID
-- Private Subnet ID
-- Internet Gateway ID
-- NAT Gateway ID
-- Bastion Public IP
-- Bastion Public DNS
-- Private EC2 Private IP
-
-These outputs help you verify the infrastructure and connect to your instances without searching through the AWS Console.
-
+- `terraform fmt` – Formats Terraform files.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
+- `terraform plan` – Shows the changes Terraform will make before creating resources.
+- `terraform apply` – Creates the infrastructure and displays the output values.
 
 # Lab Cleanup
 
-## Step 1 - Destroy AWS Resourcesnano provider.tf
+## Step 1 - Destroy AWS Resources
 
 Run:
 
@@ -1543,13 +951,13 @@ terraform destroy
 
 Type:
 
-```
+```text
 yes
 ```
 
-Verify:
+Wait until you see:
 
-```
+```text
 Destroy complete!
 ```
 
@@ -1557,43 +965,32 @@ Destroy complete!
 
 ## Step 2 - Verify AWS Console
 
-Confirm these resources have been deleted:
+Confirm the following resources have been deleted:
 
-```
-✓ EC2
-
-✓ Security Groups
-
-✓ NAT Gateway
-
-✓ Elastic IP
-
-✓ Route Tables
-
-✓ Internet Gateway
-
-✓ Subnets
-
-✓ VPC
-```
+- EC2 Instances
+- Security Groups
+- NAT Gateway
+- Elastic IP
+- Route Tables
+- Internet Gateway
+- Subnets
+- VPC
 
 ---
 
-## Step 3 - Remove Terraform Local Files
+## Step 3 - Remove Local Terraform Files
 
 Run:
 
 ```bash
 rm -rf .terraform
-
 rm -f .terraform.lock.hcl
-
 rm -f terraform.tfstate
-
 rm -f terraform.tfstate.backup
-
 rm -f crash.log
 ```
+
+> **Note:** These commands remove local Terraform state and cache files only. Your `.tf` configuration files remain unchanged.
 
 ---
 
@@ -1605,29 +1002,11 @@ Run:
 ls -la
 ```
 
-You should only see:
-
-```
-README.md
-
-versions.tf
-
-provider.tf
-
-variables.tf
-
-terraform.tfvars
-
-main.tf
-
-outputs.tf
-
-...
-```
+Verify that your Terraform configuration files (such as `versions.tf`, `provider.tf`, `variables.tf`, `terraform.tfvars`, `outputs.tf`, etc.) are still present.
 
 ---
 
-## Step 5 - Git Status
+## Step 5 - Check Git Status
 
 Run:
 
@@ -1635,40 +1014,34 @@ Run:
 git status
 ```
 
+Review the changes before committing.
+
 ---
 
-## Step 6 - Commit
+## Step 6 - Commit Changes
 
 ```bash
 git add .
-
 git commit -m "Complete Lab 13 NAT Gateway"
 ```
 
 ---
 
-## Step 7 - Push
+## Step 7 - Push to GitHub
 
 ```bash
 git push origin main
 ```
 
----
+### Lab Summary
 
-# Lab Completed
+In this lab, you learned how to:
 
-You learned:
-
-✅ NAT Gateway
-
-✅ Elastic IP
-
-✅ Private EC2
-
-✅ Public EC2
-
-✅ Public Route Table
-
-✅ Private Route Table
-
-✅ Production Networking
+- Create a VPC and Subnets
+- Configure an Internet Gateway and NAT Gateway
+- Create Public and Private Route Tables
+- Launch Public and Private EC2 Instances
+- Configure Security Groups
+- Use User Data to automate EC2 setup
+- Use Terraform Outputs to display resource information
+- Clean up AWS resources using `terraform destroy`
