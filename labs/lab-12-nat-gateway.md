@@ -421,348 +421,105 @@ terraform plan
 - `terraform validate` – Checks the configuration for syntax and validation errors.
 - `terraform plan` – Shows the changes Terraform will make before creating resources.
 
-# Step 7 - Create Internet Gateway
+### Step 7 - Create `igw.tf`
 
-## Objective
+### What is an Internet Gateway?
 
-Create an Internet Gateway (IGW) and attach it to the VPC.
+An **Internet Gateway (IGW)** allows resources in a **public subnet** to communicate with the internet.
 
-The Internet Gateway allows resources in the **public subnet** to communicate with the Internet.
-
----
-
-## Network Diagram
-
-```
-Internet
-    |
-    |
-Internet Gateway
-    |
-    |
-   VPC
-```
-
----
-
-## Create File
+Create the file:
 
 ```bash
 nano igw.tf
 ```
----
 
-## Add the Following Code
+Add the following configuration:
 
 ```hcl
 resource "aws_internet_gateway" "main" {
-
   vpc_id = aws_vpc.main.id
 
   tags = {
-
     Name = "lab13-igw"
-
   }
-
 }
 ```
 
----
+### Explanation
 
-## Explanation
+- `resource "aws_internet_gateway" "main"` – Creates an Internet Gateway.
+- `vpc_id = aws_vpc.main.id` – Attaches the Internet Gateway to the VPC.
+- `tags` – Adds a name to help identify the Internet Gateway in the AWS Console.
 
-### Create Internet Gateway
+### Validate the Configuration
 
-```hcl
-resource "aws_internet_gateway" "main"
-```
+Run the following commands:
 
-Creates one Internet Gateway.
-
-Terraform reference:
-
-```hcl
-aws_internet_gateway.main.id
-```
-
----
-After igw.tf
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
 
-### Attach to VPC
-
-```hcl
-vpc_id = aws_vpc.main.id
-```
-
-Attaches the Internet Gateway to the VPC created earlier.
-
-Relationship:
-
-```
-VPC
-   |
-Internet Gateway
-```
-
+- `terraform fmt` – Formats Terraform files.
+- `terraform validate` – Checks the configuration for syntax and validation errors.
+- `terraform plan` – Shows the changes Terraform will make before creating resources.
 ---
 
-### Tags
+## Step 8 - Create `nat.tf`
 
-```hcl
-tags = {
+### What is a NAT Gateway?
 
-  Name = "lab13-igw"
+A **NAT Gateway** allows EC2 instances in a **private subnet** to access the internet without exposing them to incoming internet traffic.
 
-}
-```
-
-AWS Console:
-
-```
-lab13-igw
-```
-
----
-
-# Step 8 - Create NAT Gateway
-
-## What is a NAT Gateway?
-
-Private EC2 instances should NOT have Public IP addresses.
-
-However, they still need Internet access to:
-
-- Install packages
-- Download updates
-- Access AWS services
-
-AWS solves this using a NAT Gateway.
-
----
-
-## Traffic Flow
-
-```
-Private EC2
-
-↓
-
-Private Route Table
-
-↓
-
-NAT Gateway
-
-↓
-
-Internet Gateway
-
-↓
-
-Internet
-```
-
-Notice:
-
-Internet **cannot** initiate a connection to the private EC2.
-
----
-
-
-Open:
+Create the file:
 
 ```bash
 nano nat.tf
 ```
 
----
-
-# Create Elastic IP
-
-Paste this first.
+Add the following configuration:
 
 ```hcl
 resource "aws_eip" "nat" {
-
   domain = "vpc"
 
   tags = {
-
     Name = "lab13-eip"
-
   }
-
 }
-```
 
----
-
-## Explanation
-
-A NAT Gateway requires a Public IP.
-
-AWS provides this using an Elastic IP.
-
-Terraform creates:
-
-```
-Elastic IP
-
-↓
-
-Attached later to NAT Gateway
-```
-
----
-
-# Create NAT Gateway
-
-Below the Elastic IP resource, paste:
-
-```hcl
 resource "aws_nat_gateway" "main" {
-
   allocation_id = aws_eip.nat.id
-
-  subnet_id = aws_subnet.public.id
+  subnet_id     = aws_subnet.public.id
 
   depends_on = [
-
     aws_internet_gateway.main
-
   ]
 
   tags = {
-
     Name = "lab13-nat"
-
   }
-
 }
 ```
-After nat.tf
+
+### Explanation
+
+- `aws_eip.nat` – Creates an Elastic IP for the NAT Gateway.
+- `allocation_id` – Attaches the Elastic IP to the NAT Gateway.
+- `subnet_id` – Places the NAT Gateway in the **public subnet**.
+- `depends_on` – Ensures the Internet Gateway is created before the NAT Gateway.
+- `tags` – Adds a name to help identify the NAT Gateway.
+
+### Validate the Configuration
+
+Run the following commands:
+
 ```bash
 terraform fmt
 terraform validate
 terraform plan
 ```
-
----
-
-## Explanation
-
-### allocation_id
-
-```hcl
-allocation_id = aws_eip.nat.id
-```
-
-Uses the Elastic IP created above.
-
----
-
-### subnet_id
-
-```hcl
-subnet_id = aws_subnet.public.id
-```
-
-A NAT Gateway **must** be placed inside a Public Subnet.
-
-It cannot exist in a Private Subnet.
-
----
-
-### depends_on
-
-```hcl
-depends_on = [
-
-  aws_internet_gateway.main
-
-]
-```
-
-Terraform first creates:
-
-```
-Internet Gateway
-
-↓
-
-Then NAT Gateway
-```
-
-Without this dependency, Terraform might try to create the NAT Gateway too early.
-
----
-
-# Architecture
-
-```
-Internet
-
-     |
-
-Internet Gateway
-
-     |
-
-Public Subnet
-
-     |
-
-NAT Gateway
-
-     |
-
-Elastic IP
-```
-
----
-
-# Verify
-
-Run:
-
-```bash
-cat nat.tf
-```
-
-Expected resources:
-
-```
-aws_eip.nat
-
-aws_nat_gateway.main
-```
-
----
-
-# Current Project
-
-```
----
-
-## Next Part
-
-In the next section you will create:
-
-- Public Route Table
-- Private Route Table
-- Public Route
-- Private Route
-- Route Table Associations
-- terraform fmt
-- terraform validate
-- terraform plan
-- terraform apply
 
 # Step 9 - Create Route Tables
 
