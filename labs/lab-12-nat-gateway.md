@@ -316,7 +316,31 @@ resource "aws_vpc" "main" {
 - `enable_dns_hostnames = true` – Assigns DNS hostnames to EC2 instances launched in the VPC.
 - `tags` – Adds a name to help identify the VPC.
 
-Enable DNS Hostnames
+### What is DNS resolution?
+
+DNS (Domain Name System) translates a hostname into an IP address.
+
+For example:
+```bash
+amazon.com
+      ↓
+54.239.28.85
+```
+Instead of remembering IP addresses, applications use hostnames, and DNS finds the correct IP.
+
+What does enable_dns_support = true do?
+
+When this setting is enabled, resources inside your VPC can use AWS's built-in DNS server to resolve domain names.
+
+For example, an EC2 instance can resolve:
+```bash
+google.com
+amazonaws.com
+s3.ap-south-1.amazonaws.com
+```
+into their corresponding IP addresses.
+
+### Enable DNS Hostnames
 ```bash
 enable_dns_hostnames = true
 ```
