@@ -918,3 +918,57 @@ You will learn:
 - Apache Web Server
 - Testing from your browser
 - Complete AWS networking project
+---
+
+# Part 3 - Launch EC2 in the Custom VPC
+
+Current architecture:
+
+```
+
+Internet
+
+│
+
+▼
+
+Internet Gateway
+
+│
+
+▼
+
+Route Table
+
+│
+
+▼
+
+Public Subnet
+
+│
+
+▼
+
+EC2 Web Server
+create 
+```bash
+data.tf
+```
+```bash
+data "aws_ami" "amazon_linux" {
+
+  most_recent = true
+
+  owners = ["amazon"]
+
+  filter {
+
+    name = "name"
+
+    values = ["al2023-ami-*-x86_64"]
+
+  }
+
+}
+```
