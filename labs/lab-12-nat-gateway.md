@@ -271,6 +271,12 @@ instance_type = "t2.micro"
 
 key_name = "terraform-key"
 ```
+### Explanation
+
+- `terraform.tfvars` stores the actual values for the variables declared in `variables.tf`.
+- Terraform automatically loads this file during execution.
+- Separating variable values from the main configuration makes the code reusable and easier to manage across different environments.
+  
 After terraform.tfvars
 ```bash
 terraform fmt
