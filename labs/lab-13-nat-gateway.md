@@ -1863,6 +1863,13 @@ resource "aws_instance" "bastion" {
 
 }
 ```
+After ec2.tf
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+
 
 ---
 
@@ -2055,23 +2062,10 @@ Terraform Outputs display useful information after infrastructure is created.
 Instead of searching the AWS Console, Terraform prints important values directly in the terminal.
 
 ---
-
-## Create File
-
-```bash
-touch outputs.tf
-```
-
 Open the file:
 
 ```bash
 nano outputs.tf
-```
-
-or
-
-```bash
-code outputs.tf
 ```
 
 ---
@@ -2143,7 +2137,13 @@ output "private_instance_private_ip" {
 
 }
 ```
-
+After outputs.tf
+```bash
+terraform fmt
+terraform validate
+terraform plan
+terraform apply
+```
 ---
 
 # Explanation
