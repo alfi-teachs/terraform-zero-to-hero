@@ -118,10 +118,36 @@ terraform {
 
 }
 ```
+Open it:
+```bash
+nano provider.tf
+```
+```bash
+provider "aws" {
+
+  region = var.aws_region
+
+  default_tags {
+
+    tags = {
+
+      Project     = "terraform-zero-to-hero"
+
+      Environment = "Lab-13"
+
+      ManagedBy   = "Terraform"
+
+    }
+
+  }
+
+}
+```
+
 
 # Lab Cleanup
 
-## Step 1 - Destroy AWS Resources
+## Step 1 - Destroy AWS Resourcesnano provider.tf
 
 Run:
 
