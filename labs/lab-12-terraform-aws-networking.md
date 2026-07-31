@@ -951,7 +951,11 @@ Public Subnet
 ▼
 
 EC2 Web Server
+
+### Step 18 - Find Latest Amazon Linux AMI
+
 create 
+
 ```bash
 data.tf
 ```
@@ -971,4 +975,346 @@ data "aws_ami" "amazon_linux" {
   }
 
 }
+```
+### Step 19 - Create Security Group
+
+Open:
+```bash
+security-group.tf
+```
+```bash
+resource "aws_security_group" "web" {
+
+  name = "terraform-web-sg"
+
+  description = "Allow SSH and HTTP"
+
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+
+    from_port = 22
+
+    to_port = 22
+
+    protocol = "tcp"
+
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+
+  ingress {
+
+    from_port = 80
+
+    to_port = 80
+
+    protocol = "tcp"
+
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+
+  egress {
+
+    from_port = 0
+
+    to_port = 0
+
+    protocol = "-1"
+
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+
+  tags = {
+
+    Name = "terraform-web-sg"
+
+  }
+
+}
+```
+Security Group Explanation
+
+This allows:
+```bash
+SSH
+
+Port 22
+
+↓
+
+Remote Login
+
+
+HTTP
+
+Port 80
+
+↓
+
+Website Access
+```
+Everything else remains blocked unless another rule allows it.
+
+### Step 20 - Create User Data Script
+
+Create:
+```bash 
+user-data.sh
+```
+```bash
+#!/bin/bash
+
+dnf update -y
+
+dnf install -y httpd
+
+systemctl enable httpd
+
+systemctl start httpd
+
+cat <<EOF > /var/www/html/index.html
+<html>
+<head>
+<title>Terraform Lab</title>
+</head>
+<body>
+
+<h1>Congratulations!</h1>
+
+<h2>Your Terraform Networking Lab Works!</h2>
+
+<p>Custom VPC</p>
+
+<p>Public Subnet</p>
+
+<p>Internet Gateway</p>
+
+<p>Route Table</p>
+
+<p>EC2 Instance</p>
+
+<p>Apache Installed Automatically</p>
+
+</body>
+</html>
+EOF
+```
+### Step 21 - Create EC2
+
+Open:
+
+```bash
+ec2.tf
+```
+```bash
+resource "aws_instance" "web" {
+
+  ami = data.aws_ami.amazon_linux.id
+
+  instance_type = var.instance_type
+
+  subnet_id = aws_subnet.public.id
+
+  vpc_security_group_ids = [
+
+    aws_security_group.web.id
+
+  ]
+
+  associate_public_ip_address = true
+
+  user_data = file("user-data.sh")
+
+  tags = {
+
+    Name = "terraform-web-server"
+
+  }
+
+}
+```
+Why associate_public_ip_address?
+
+Without:
+```bash
+Public IP
+
+❌
+
+No browser access
+```
+With:
+```bash
+Public IP
+
+↓
+
+Website works
+```
+### Step 22 - Create Outputs
+
+Open:
+```bash
+outputs.tf
+```
+```bash
+output "vpc_id" {
+
+  value = aws_vpc.main.id
+
+}
+
+output "public_subnet_id" {
+
+  value = aws_subnet.public.id
+
+}
+
+output "private_subnet_id" {
+
+  value = aws_subnet.private.id
+
+}
+
+output "instance_id" {
+
+  value = aws_instance.web.id
+
+}
+
+output "public_ip" {
+
+  value = aws_instance.web.public_ip
+
+}
+
+output "website" {
+
+  value = "http://${aws_instance.web.public_ip}"
+
+}
+
+```
+### Step 23 - Format
+
+Run:
+```bash
+terraform fmt
+```
+### Step 24 - Validate
+
+Run:
+```bash
+terraform validate
+```
+Expected:
+Success! The configuration is valid.
+### Step 25 - Plan
+
+Run:
+```bash
+terraform plan
+```
+Terraform should display resources similar to:
+```bash
+aws_vpc.main
+
+aws_subnet.public
+
+aws_subnet.private
+
+aws_internet_gateway.main
+
+aws_route_table.public
+
+aws_security_group.web
+
+aws_instance.web
+```
+### Step 26 - Apply
+
+Run:
+```bash
+terraform apply
+```
+Terraform creates everything in dependency order.
+### Step 27 - Verify in AWS
+
+Open:
+```bash
+AWS Console
+
+↓
+
+VPC
+```
+Check:
+```bash
+VPC
+
+Public Subnet
+
+Private Subnet
+
+Internet Gateway
+
+Route Table
+```
+Verify:
+```bash
+terraform-web-server
+
+Running
+```
+### Step 28 - Test Website
+
+Terraform outputs:
+```bash
+website =
+http://xx.xx.xx.xx
+```
+Open the URL in your browser.
+
+Expected page:
+```bash
+
+Congratulations!
+
+Your Terraform Networking Lab Works!
+```
+
+Cleanup
+
+When you're finished:
+```bash
+terraform destroy
+```
+```bash
+ls -la
+```
+Remove the .terraform directory:
+```bash
+rm -rf .terraform
+```
+Remove the lock file:
+```bash
+rm -f .terraform.lock.hcl
+```
+Verify:
+```bash
+ls -la
+```
+This removes all resources and helps avoid AWS charges.
+Git Save
+```bash
+git status
+
+git add .
+
+git commit -m "Complete Lab 12 AWS Networking Project"
+
+git push origin main
 ```
