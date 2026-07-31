@@ -161,6 +161,14 @@ provider "aws" {
   }
 
 }
+
+### Explanation
+
+- `provider "aws"` – Configures the AWS provider for this project.
+- `region = var.aws_region` – Uses the AWS region stored in the `aws_region` variable.
+- `default_tags` – Automatically adds the specified tags to supported AWS resources.
+- `Project`, `Environment`, `ManagedBy` – Common tags used to organize, identify, and manage AWS resources.
+
 ```
 After provider.tf
 ```bash
