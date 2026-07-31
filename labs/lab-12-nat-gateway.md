@@ -236,6 +236,13 @@ variable "key_name" {
   type = string
 
 }
+### Explanation
+
+- `variable` – Declares an input variable used in the Terraform configuration.
+- `description` – Explains the purpose of the variable.
+- `type = string` – Specifies that the variable accepts text values.
+- Using variables makes the configuration reusable, flexible, and easier to maintain without modifying the main code.
+
 ```
 After variables.tf
 ```bash
