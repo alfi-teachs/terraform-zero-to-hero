@@ -404,8 +404,8 @@ resource "aws_subnet" "private" {
 - `vpc_id` – Associates the subnet with the VPC.
 - `cidr_block` – Defines the IP address range for the subnet.
 - `availability_zone` – Specifies the Availability Zone where the subnet is created.
-- `map_public_ip_on_launch = true` – Automatically assigns a public IP to EC2 instances launched in the public subnet.
-- The private subnet does **not** use `map_public_ip_on_launch`, so EC2 instances launched there do not receive a public IP.
+- `map_public_ip_on_launch = true` – Automatically assigns a **public IP address** to every EC2 instance launched in the subnet, allowing        it to be accessed from the internet (if security rules allow).
+- The private subnet does **not** use `map_public_ip_on_launch`, so EC2 instances receive **only a private IP address** and cannot be            accessed directly from the internet.
 
 ### Validate the Configuration
 
