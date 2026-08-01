@@ -1174,3 +1174,991 @@ terraform validate
 terraform plan
 ```
 ----------------
+# Step 12 - Create `launch-template.tf`
+
+## Objective
+
+Create a Launch Template that defines the configuration for EC2 instances launched by the Auto Scaling Group.
+
+Instead of defining the EC2 configuration inside the ASG, AWS uses a Launch Template as a reusable blueprint.
+
+---
+
+## What is a Launch Template?
+
+A **Launch Template** is a blueprint for launching EC2 instances.
+
+It contains:
+
+- Amazon Machine Image (AMI)
+- Instance Type
+- Key Pair
+- Security Group
+- User Data
+- Tags
+
+The Auto Scaling Group uses this template whenever it launches a new EC2 instance.
+
+---
+
+## Open the File
+
+```bash
+nano launch-template.tf
+```
+
+---
+
+## Add the Following Code
+
+```hcl
+resource "aws_launch_template" "web" {
+
+  name_prefix = "lab14-launch-template-"
+
+  image_id = data.aws_ami.amazon_linux.id
+
+  instance_type = var.instance_type
+
+  key_name = var.key_name
+
+  vpc_security_group_ids = [
+
+    aws_security_group.web.id
+
+  ]
+
+  user_data = base64encode(file("${path.module}/user-data.sh"))
+
+  tag_specifications {
+
+    resource_type = "instance"
+
+    tags = {
+
+      Name = "lab14-web-server"
+
+    }
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+### Launch Template
+
+```hcl
+resource "aws_launch_template" "web"
+```
+
+Creates a Launch Template.
+
+Terraform reference:
+
+```hcl
+aws_launch_template.web.id
+```
+
+---
+
+### AMI
+
+```hcl
+image_id = data.aws_ami.amazon_linux.id
+```
+
+Uses the latest Amazon Linux 2023 AMI.
+
+---
+
+### Instance Type
+
+```hcl
+instance_type = var.instance_type
+```
+
+Uses the EC2 instance type from `terraform.tfvars`.
+
+Example:
+
+```hcl
+instance_type = "t2.micro"
+```
+
+---
+
+### Key Pair
+
+```hcl
+key_name = var.key_name
+```
+
+Uses your existing AWS EC2 Key Pair for SSH access.
+
+---
+
+### Security Group
+
+```hcl
+vpc_security_group_ids = [
+
+  aws_security_group.web.id
+
+]
+```
+
+Attaches the Web Server Security Group to every EC2 instance launched by the Auto Scaling Group.
+
+---
+
+### User Data
+
+```hcl
+user_data = base64encode(file("${path.module}/user-data.sh"))
+```
+
+Reads the `user-data.sh` file, converts it to Base64, and runs it automatically when each EC2 instance starts.
+
+> **Note:** The Launch Template requires the User Data to be Base64 encoded.
+
+---
+
+### Tags
+
+```hcl
+tag_specifications {
+
+  resource_type = "instance"
+
+  tags = {
+
+    Name = "lab14-web-server"
+
+  }
+
+}
+```
+
+Adds the **Name** tag to every EC2 instance created by the Auto Scaling Group.
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+---
+# Step 13 - Create `alb.tf`
+
+## Objective
+
+Create an Application Load Balancer (ALB) that distributes incoming HTTP traffic across the EC2 instances launched by the Auto Scaling Group.
+
+---
+
+## What is an Application Load Balancer?
+
+An **Application Load Balancer (ALB)** receives requests from users and forwards them to healthy EC2 instances.
+
+Benefits:
+
+- High Availability
+- Load Balancing
+- Health Checks
+- Fault Tolerance
+
+---
+
+## Network Diagram
+
+```text
+                Internet
+                    |
+                    |
+       Application Load Balancer
+                    |
+              Target Group
+                    |
+        Auto Scaling Group (ASG)
+```
+
+---
+
+## Open the File
+
+```bash
+nano alb.tf
+```
+
+---
+
+## Step 13.1 - Create Target Group
+
+Add the following configuration:
+
+```hcl
+resource "aws_lb_target_group" "web" {
+
+  name = "lab14-target-group"
+
+  port = 80
+
+  protocol = "HTTP"
+
+  vpc_id = aws_vpc.main.id
+
+  health_check {
+
+    path = "/"
+
+    protocol = "HTTP"
+
+    matcher = "200"
+
+  }
+
+  tags = {
+
+    Name = "lab14-target-group"
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `aws_lb_target_group.web` – Creates a Target Group.
+- `port = 80` – Sends traffic to port 80 on the EC2 instances.
+- `protocol = "HTTP"` – Uses the HTTP protocol.
+- `health_check` – Checks whether EC2 instances are healthy before routing traffic.
+
+---
+
+## Step 13.2 - Create the Application Load Balancer
+
+Add the following configuration below the Target Group:
+
+```hcl
+resource "aws_lb" "main" {
+
+  name = "lab14-alb"
+
+  internal = false
+
+  load_balancer_type = "application"
+
+  security_groups = [
+
+    aws_security_group.alb.id
+
+  ]
+
+  subnets = [
+
+    aws_subnet.public_1.id,
+
+    aws_subnet.public_2.id
+
+  ]
+
+  tags = {
+
+    Name = "lab14-alb"
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `internal = false` – Creates an internet-facing ALB.
+- `load_balancer_type = "application"` – Creates an Application Load Balancer.
+- `security_groups` – Attaches the ALB Security Group.
+- `subnets` – Places the ALB in two public subnets for high availability.
+
+---
+
+## Step 13.3 - Create Listener
+
+Add the following configuration below:
+
+```hcl
+resource "aws_lb_listener" "http" {
+
+  load_balancer_arn = aws_lb.main.arn
+
+  port = 80
+
+  protocol = "HTTP"
+
+  default_action {
+
+    type = "forward"
+
+    target_group_arn = aws_lb_target_group.web.arn
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+- `aws_lb_listener.http` – Creates an HTTP listener.
+- `port = 80` – Listens for incoming HTTP requests.
+- `default_action` – Forwards requests to the Target Group.
+
+---
+
+## Traffic Flow
+
+```text
+User
+
+↓
+
+Application Load Balancer
+
+↓
+
+Target Group
+
+↓
+
+Auto Scaling Group
+
+↓
+
+Healthy EC2 Instance
+```
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+----------------
+# Step 14 - Create `auto-scaling-group.tf`
+
+## Objective
+
+Create an Auto Scaling Group (ASG) that automatically launches, replaces, and manages EC2 instances using the Launch Template.
+
+The ASG will register its instances with the Application Load Balancer Target Group.
+
+---
+
+## What is an Auto Scaling Group?
+
+An **Auto Scaling Group (ASG)** automatically manages a group of EC2 instances.
+
+It can:
+
+- Launch EC2 instances
+- Replace unhealthy instances
+- Maintain the desired number of instances
+- Scale in or out based on demand
+
+---
+
+## Network Diagram
+
+```text
+                Internet
+                    |
+                    |
+      Application Load Balancer
+                    |
+              Target Group
+                    |
+          Auto Scaling Group
+              /          \
+             /            \
+      EC2 Instance    EC2 Instance
+```
+
+---
+
+## Open the File
+
+```bash
+nano auto-scaling-group.tf
+```
+
+---
+
+## Add the Following Code
+
+```hcl
+resource "aws_autoscaling_group" "web" {
+
+  name = "lab14-asg"
+
+  desired_capacity = var.desired_capacity
+
+  min_size = var.min_size
+
+  max_size = var.max_size
+
+  vpc_zone_identifier = [
+
+    aws_subnet.public_1.id,
+
+    aws_subnet.public_2.id
+
+  ]
+
+  target_group_arns = [
+
+    aws_lb_target_group.web.arn
+
+  ]
+
+  health_check_type = "ELB"
+
+  health_check_grace_period = 300
+
+  launch_template {
+
+    id = aws_launch_template.web.id
+
+    version = "$Latest"
+
+  }
+
+  tag {
+
+    key = "Name"
+
+    value = "lab14-web-server"
+
+    propagate_at_launch = true
+
+  }
+
+}
+```
+
+---
+
+## Explanation
+
+### Auto Scaling Group
+
+```hcl
+resource "aws_autoscaling_group" "web"
+```
+
+Creates an Auto Scaling Group.
+
+Terraform reference:
+
+```hcl
+aws_autoscaling_group.web.id
+```
+
+---
+
+### Desired Capacity
+
+```hcl
+desired_capacity = var.desired_capacity
+```
+
+Starts the number of EC2 instances defined in `terraform.tfvars`.
+
+Example:
+
+```text
+desired_capacity = 2
+```
+
+---
+
+### Minimum Size
+
+```hcl
+min_size = var.min_size
+```
+
+Ensures at least the minimum number of EC2 instances are always running.
+
+---
+
+### Maximum Size
+
+```hcl
+max_size = var.max_size
+```
+
+Limits the maximum number of EC2 instances the ASG can launch.
+
+---
+
+### Public Subnets
+
+```hcl
+vpc_zone_identifier = [
+
+  aws_subnet.public_1.id,
+
+  aws_subnet.public_2.id
+
+]
+```
+
+Launches EC2 instances across both public subnets for high availability.
+
+---
+
+### Target Group
+
+```hcl
+target_group_arns = [
+
+  aws_lb_target_group.web.arn
+
+]
+```
+
+Automatically registers every EC2 instance with the ALB Target Group.
+
+---
+
+### Health Check
+
+```hcl
+health_check_type = "ELB"
+```
+
+Uses the Application Load Balancer health checks.
+
+If an EC2 instance becomes unhealthy, the ASG automatically terminates it and launches a replacement.
+
+---
+
+### Grace Period
+
+```hcl
+health_check_grace_period = 300
+```
+
+Waits **300 seconds (5 minutes)** before checking the health of a newly launched EC2 instance.
+
+This gives the instance enough time to boot and run the User Data script.
+
+---
+
+### Launch Template
+
+```hcl
+launch_template {
+
+  id = aws_launch_template.web.id
+
+  version = "$Latest"
+
+}
+```
+
+Uses the latest version of the Launch Template whenever the ASG launches a new EC2 instance.
+
+---
+
+### Tag
+
+```hcl
+tag {
+
+  key = "Name"
+
+  value = "lab14-web-server"
+
+  propagate_at_launch = true
+
+}
+```
+
+Automatically adds the **Name** tag to every EC2 instance created by the ASG.
+
+---
+
+## Validate the Configuration
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+------------
+# Step 15 - Create `outputs.tf`
+
+## Objective
+
+Display useful information after the infrastructure is created.
+
+Terraform Outputs allow you to quickly access important resource details without opening the AWS Console.
+
+---
+
+## Open the File
+
+```bash
+nano outputs.tf
+```
+
+---
+
+## Add the Following Code
+
+```hcl
+output "vpc_id" {
+
+  description = "VPC ID"
+
+  value = aws_vpc.main.id
+
+}
+
+output "public_subnet_1_id" {
+
+  description = "Public Subnet 1 ID"
+
+  value = aws_subnet.public_1.id
+
+}
+
+output "public_subnet_2_id" {
+
+  description = "Public Subnet 2 ID"
+
+  value = aws_subnet.public_2.id
+
+}
+
+output "alb_dns_name" {
+
+  description = "Application Load Balancer DNS Name"
+
+  value = aws_lb.main.dns_name
+
+}
+
+output "target_group_arn" {
+
+  description = "Target Group ARN"
+
+  value = aws_lb_target_group.web.arn
+
+}
+
+output "launch_template_id" {
+
+  description = "Launch Template ID"
+
+  value = aws_launch_template.web.id
+
+}
+
+output "autoscaling_group_name" {
+
+  description = "Auto Scaling Group Name"
+
+  value = aws_autoscaling_group.web.name
+
+}
+```
+
+---
+
+## Explanation
+
+- `vpc_id` – Displays the VPC ID.
+- `public_subnet_1_id` – Displays the first public subnet ID.
+- `public_subnet_2_id` – Displays the second public subnet ID.
+- `alb_dns_name` – Displays the DNS name of the Application Load Balancer.
+- `target_group_arn` – Displays the Target Group ARN.
+- `launch_template_id` – Displays the Launch Template ID.
+- `autoscaling_group_name` – Displays the Auto Scaling Group name.
+
+---
+
+## Deploy the Infrastructure
+
+Run:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+terraform apply
+```
+
+Type:
+
+```text
+yes
+```
+
+Wait until you see:
+
+```text
+Apply complete!
+```
+
+---
+
+## Verify the Deployment
+
+Display the outputs:
+
+```bash
+terraform output
+```
+
+Example:
+
+```text
+alb_dns_name = "lab14-alb-123456789.ap-south-1.elb.amazonaws.com"
+
+autoscaling_group_name = "lab14-asg"
+```
+
+---
+
+## Test the Application
+
+Open the ALB DNS name in your browser:
+
+```text
+http://<alb_dns_name>
+```
+
+Refresh the page several times.
+
+You should see different **Instance IDs**, confirming that the Application Load Balancer is distributing traffic across the EC2 instances managed by the Auto Scaling Group.
+
+---
+
+## Test Auto Scaling Group Recovery
+
+1. Open the **EC2 Console**.
+2. Terminate one of the EC2 instances created by the Auto Scaling Group.
+3. Wait a few minutes.
+
+The Auto Scaling Group automatically launches a new EC2 instance to maintain the desired capacity.
+
+Refresh the ALB page again.
+
+You should see the new **Instance ID** after the replacement instance becomes healthy.
+
+---
+
+## Architecture
+
+```text
+                  Internet
+                      |
+                      |
+       Application Load Balancer
+                      |
+                Target Group
+                      |
+          Auto Scaling Group
+              /          \
+             /            \
+      EC2 Instance    EC2 Instance
+          (Auto)          (Auto)
+```
+
+---
+
+## Summary
+
+You created:
+
+- VPC
+- Two Public Subnets
+- Internet Gateway
+- Route Table
+- Security Groups
+- Launch Template
+- Auto Scaling Group
+- Application Load Balancer
+- Target Group
+- Listener
+- Outputs
+
+You also learned:
+
+- Launch Templates
+- Auto Scaling Groups (ASG)
+- Desired, Minimum, and Maximum Capacity
+- Automatic EC2 Replacement
+- High Availability
+- Fault Tolerance
+- Application Load Balancer Integration
+
+---
+# Lab Cleanup
+
+## Step 1 - Destroy AWS Resources
+
+Run:
+
+```bash
+terraform destroy
+```
+
+Type:
+
+```text
+yes
+```
+
+Wait until you see:
+
+```text
+Destroy complete!
+```
+
+---
+
+## Step 2 - Verify AWS Console
+
+Confirm the following resources have been deleted:
+
+- Auto Scaling Group
+- Launch Template
+- Application Load Balancer
+- Target Group
+- Listener
+- EC2 Instances
+- Security Groups
+- Route Table
+- Internet Gateway
+- Subnets
+- VPC
+
+> **Note:** Wait until the Auto Scaling Group finishes deleting before the Launch Template and Load Balancer are removed.
+
+---
+
+## Step 3 - Remove Local Terraform Files
+
+Run:
+
+```bash
+rm -rf .terraform
+
+rm -f .terraform.lock.hcl
+
+rm -f terraform.tfstate
+
+rm -f terraform.tfstate.backup
+
+rm -f crash.log
+```
+
+> **Note:** These commands remove only local Terraform state and cache files. Your `.tf` configuration files remain unchanged.
+
+---
+
+## Step 4 - Verify Cleanup
+
+Run:
+
+```bash
+ls -la
+```
+
+Verify your project files are still present:
+
+```text
+alb.tf
+auto-scaling-group.tf
+data.tf
+igw.tf
+launch-template.tf
+outputs.tf
+provider.tf
+route-table.tf
+security-group.tf
+subnet.tf
+terraform.tfvars
+user-data.sh
+variables.tf
+versions.tf
+vpc.tf
+```
+
+---
+
+## Step 5 - Check Git Status
+
+Run:
+
+```bash
+git status
+```
+
+Review the changes before committing.
+
+---
+
+## Step 6 - Commit Changes
+
+```bash
+git add .
+
+git commit -m "Complete Lab 14 Auto Scaling Group"
+```
+
+---
+
+## Step 7 - Push to GitHub
+
+```bash
+git push origin main
+```
+
+---
+
+# Lab Completed
+
+You learned:
+
+- Launch Templates
+- Auto Scaling Groups (ASG)
+- Desired, Minimum, and Maximum Capacity
+- Automatic EC2 Replacement
+- Application Load Balancer Integration
+- Health Checks
+- High Availability
+- Fault Tolerance
+- Infrastructure Cleanup
