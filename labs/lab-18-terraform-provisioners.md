@@ -1152,13 +1152,4 @@ You have successfully completed **Lab 18 – Terraform Provisioners**.
 
 You can now automate post-deployment tasks such as copying files, running remote commands, and configuring EC2 instances using Terraform provisioners.
 
-## Next Lab
-
-**Lab 19 – Terraform Remote Backend (S3 + DynamoDB)**
-
-In the next lab, you'll learn how to:
-
-- Store the Terraform state file in an S3 bucket
-- Use DynamoDB for state locking
-- Collaborate safely with a team
-- Protect the Terraform state from corruption
+--------------
